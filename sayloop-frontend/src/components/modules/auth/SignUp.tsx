@@ -8,7 +8,6 @@ const SignUpPage = () => {
     const { isLoaded, isSignedIn } = useUser();
     const navigate = useNavigate();
 
-    // Redirect if already signed in
     useEffect(() => {
         if (isLoaded && isSignedIn) {
             navigate("/learn");
@@ -17,13 +16,12 @@ const SignUpPage = () => {
 
     return (
         <div className="h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-6 overflow-hidden">
-            {/* Subtle Background Elements */}
+        
             <div className="absolute inset-0 pointer-events-none opacity-40">
                 <div className="absolute top-[10%] left-[10%] w-32 h-32 bg-purple-400/20 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-[15%] right-[15%] w-40 h-40 bg-pink-400/20 rounded-full blur-3xl"></div>
             </div>
 
-            {/* Main Container */}
             <div className="w-full max-w-md relative z-10">
                 <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                     {/* Logo */}
@@ -39,13 +37,10 @@ const SignUpPage = () => {
                         <p className="text-sm text-gray-600">Join millions learning with Sayloop</p>
                     </div>
 
-                    {/* Clerk Sign Up Form */}
                     <SignUp.Root>
                         <SignUp.Step name="start">
-                            {/* Global Error */}
                             <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
 
-                            {/* Social Buttons */}
                             <div className="space-y-3 mb-4">
                                 <Clerk.Connection
                                     name="google"
@@ -56,7 +51,6 @@ const SignUpPage = () => {
                                 </Clerk.Connection>
                             </div>
 
-                            {/* Divider */}
                             <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center">
                                     <div className="w-full border-t border-gray-200"></div>
@@ -66,7 +60,6 @@ const SignUpPage = () => {
                                 </div>
                             </div>
 
-                            {/* Name Fields */}
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <Clerk.Field name="firstName">
                                     <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -95,7 +88,6 @@ const SignUpPage = () => {
                                 </Clerk.Field>
                             </div>
 
-                            {/* Email Field */}
                             <Clerk.Field name="emailAddress" className="mb-4">
                                 <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Email
@@ -109,7 +101,6 @@ const SignUpPage = () => {
                                 <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
                             </Clerk.Field>
 
-                            {/* Password Field */}
                             <Clerk.Field name="password" className="mb-4">
                                 <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Password
@@ -123,7 +114,6 @@ const SignUpPage = () => {
                                 <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
                             </Clerk.Field>
 
-                            {/* Submit Button */}
                             <SignUp.Action
                                 submit
                                 className="w-full py-2.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
@@ -131,7 +121,6 @@ const SignUpPage = () => {
                                 Create account
                             </SignUp.Action>
 
-                            {/* Terms */}
                             <p className="mt-4 text-xs text-center text-gray-500">
                                 By signing up, you agree to our{' '}
                                 <Link to="/terms" className="text-purple-600 hover:text-purple-700">
@@ -144,7 +133,6 @@ const SignUpPage = () => {
                             </p>
                         </SignUp.Step>
 
-                        {/* Verification Step */}
                         <SignUp.Step name="verifications">
                             <SignUp.Strategy name="email_code">
                                 <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
@@ -187,7 +175,6 @@ const SignUpPage = () => {
                             </SignUp.Strategy>
                         </SignUp.Step>
 
-                        {/* Continue Step */}
                         <SignUp.Step name="continue">
                             <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
 
@@ -196,7 +183,6 @@ const SignUpPage = () => {
                                 Tell us a bit more about yourself
                             </p>
 
-                            {/* Username Field (if required) */}
                             <Clerk.Field name="username" className="mb-4">
                                 <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Username
@@ -218,8 +204,6 @@ const SignUpPage = () => {
                             </SignUp.Action>
                         </SignUp.Step>
                     </SignUp.Root>
-
-                    {/* Sign In Link */}
                     <div className="mt-6 pt-6 border-t border-gray-100 text-center">
                         <p className="text-sm text-gray-600">
                             Already have an account?{' '}
