@@ -1,10 +1,10 @@
 import React from 'react';
-import Navbar from '../../components/Navbar';
-import Hero from '../../components/LandingPage/Hero';
-import BentoGrid from '../../components/LandingPage/BentoGrid';
-import Stats from '../../components/LandingPage/Stats';
-import CTA from '../../components/LandingPage/CTA';
-import Footer from '../../components/Footer';
+import Navbar from '../../components/modules/LandingPage/Navbar';
+import Hero from '../../components/modules/LandingPage/Hero';
+import BentoGrid from '../../components/modules/LandingPage/BentoGrid';
+import Stats from '../../components/modules/LandingPage/Stats';
+import CTA from '../../components/modules/LandingPage/CTA';
+import Footer from '../../components/modules/LandingPage/Footer';
 
 type Props = {}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
-import { Mainlogo } from '../assets/logo'; // Adjust path if needed
+import { Mainlogo } from '../../../assets/logo'; // Adjust path if needed
 
 const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);

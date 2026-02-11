@@ -1,5 +1,5 @@
 import React from "react";
-import { communicate, run, learn, top } from "../../assets/LandingPage";
+import { communicate, run, learn, top } from "../../../assets/LandingPage";
 
 const BentoGrid = () => {
     return (

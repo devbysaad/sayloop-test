@@ -1,6 +1,6 @@
 import React from 'react'
-import Sidebar from '../../components/home/Sidebar'
-import RightSidebar from '../../components/home/Rightsidebar'
+import Sidebar from '../../components/modules/home/Sidebar'
+import RightSidebar from '../../components/modules/home/Rightsidebar'
 
 type Props = {}
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { sayloopLogo } from '../../assets/logo';
-import { home, letter, leaderboard, quests, shop, profile, more } from '../../assets/SidebarAssets/index';
+import { sayloopLogo } from '../../../assets/logo';
+import { home, letter, leaderboard, quests, shop, profile, more } from '../../../assets/SidebarAssets/index';
 
 type Props = {}
 

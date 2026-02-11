@@ -1,6 +1,6 @@
 import React from 'react'
 import { UserButton } from '@clerk/clerk-react'
-import { chest, heart, lingobird, lock, points, start, usaflag } from '../../assets/RightsidebarAssets'
+import { chest, heart, lingobird, lock, points, start, usaflag } from '../../../assets/RightsidebarAssets'
 
 type Props = {}
 
