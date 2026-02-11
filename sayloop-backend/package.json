@@ -1,0 +1,29 @@
+{
+  "name": "@sayloop/api",
+  "version": "1.0.0",
+  "description": "SayLoop Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "build": "echo 'No build step required for Node.js'",
+    "lint": "echo 'Linting not configured yet'",
+    "clean": "rm -rf .turbo"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",  
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongoose": "^9.1.5",
+    "openmeteo": "^1.2.3",
+    "react-redux": "^9.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
