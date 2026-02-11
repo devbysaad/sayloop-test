@@ -3,7 +3,7 @@ type Props = {}
 
 const App = (props: Props) => {
   return (
-    <div>
+    <div className="">
       <Routes />
     </div>
   )
