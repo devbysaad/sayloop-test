@@ -1,6 +1,6 @@
 import React from 'react';
-import { sayloopLogo } from '../../assets/logo';
-import { home, letter, leaderboard, quests, shop, profile, more } from '../../assets/SidebarAssets/index';
+import { sayloopLogo } from '../../../assets/logo';
+import { home, letter, leaderboard, quests, shop, profile, more } from '../../../assets/SidebarAssets/index';
 
 type Props = {}
 
@@ -16,7 +16,7 @@ const Sidebar = (props: Props) => {
   ];
 
   return (
-    <aside className="w-72 bg-gray-950 text-white px-2 py-4 min-h-screen">
+    <aside className="w-72 bg-gray-950 text-white px-2 py-4 min-h-screen fixed top-0 left-0 z-40 flex flex-col">
       {/* Logo */}
       <div className="mb- px-2">
         <img className="w-44" src={sayloopLogo} alt="Sayloop Logo" />

@@ -6,7 +6,7 @@ type Props = {}
 
 const RightSidebar = (props: Props) => {
   return (
-    <aside className="w-80 mr-35 bg-[#0A0E13] text-white p-4 overflow-y-auto">
+    <aside className="w-80  bg-[#0A0E13] text-white p-4 overflow-y-auto fixed right-0 top-0 bottom-0 hidden lg:block">
       
       {/* Stats Header */}
       <div className="flex items-center justify-between mb-6 px-2">

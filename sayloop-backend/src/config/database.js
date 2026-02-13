@@ -1,13 +1,15 @@
-const mongoose = require('mongoose');
+// config/database.js
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 function callToDB() {
-    return mongoose.connect(process.env.MONGODB_URI)
-        .then(() => {
-            console.log('Connected to MongoDB');
-        })
-        .catch((err) => {
-            console.error(err);
-        });
+  pool.connect()
+    .then(() => console.log("Connected to Neon PostgreSQL"))
+    .catch((err) => console.error("DB Error:", err));
 }
 
-module.exports = callToDB;
+module.exports = { callToDB, pool };
