@@ -1,8 +1,17 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 import HeroImg from "../../../assets/PNG/hero.png";
 
 const Hero = () => {
+    const { isSignedIn, isLoaded } = useUser();
+    const [showButtons, setShowButtons] = useState(false);
+
+    useEffect(() => {
+        if (isLoaded) {
+            setShowButtons(true);
+        }
+    }, [isLoaded]);
     return (
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#F0F9FF] to-white pt-24 pb-12 px-6">
 
@@ -13,7 +22,7 @@ const Hero = () => {
 
                 <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-8 animate-fade-in-up">
                     <div className="inline-block px-4 py-1.5 rounded-full bg-green-100 text-green-700 font-bold text-xs uppercase tracking-widest mb-2 border border-green-200">
-                        v2.0 Now Live
+                       Just Learn
                     </div>
 
                     <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
@@ -28,16 +37,31 @@ const Hero = () => {
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
-                        <Link to="/sign-up" className="w-full sm:w-auto">
-                            <button className="w-full sm:w-auto bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-4 px-10 rounded-2xl text-lg shadow-[0_4px_0_0_#2B6A01] active:shadow-none active:translate-y-[4px] transition-all duration-200">
-                                Start Learning
-                            </button>
-                        </Link>
-                        <Link to="/sign-in" className="w-full sm:w-auto">
-                            <button className="w-full sm:w-auto bg-white hover:bg-gray-50 text-[#1CB0F6] font-bold py-4 px-10 rounded-2xl text-lg border-2 border-[#E5E5E5] shadow-[0_4px_0_0_#E5E5E5] active:shadow-none active:translate-y-[4px] transition-all duration-200">
-                                Login
-                            </button>
-                        </Link>
+                        {!showButtons ? (
+                            // Show loading state while checking authentication
+                            <div className="w-full sm:w-auto bg-gray-200 animate-pulse py-4 px-10 rounded-2xl h-14"></div>
+                        ) : isSignedIn ? (
+                            // Show "Continue Learning" button if user is logged in
+                            <Link to="/learn" className="w-full sm:w-auto">
+                                <button className="w-full sm:w-auto bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-4 px-10 rounded-2xl text-lg shadow-[0_4px_0_0_#2B6A01] active:shadow-none active:translate-y-[4px] transition-all duration-200">
+                                   Continue Learning
+                                </button>
+                            </Link>
+                        ) : (
+                            // Show "Get Started" and "I Already Have An Account" buttons if not logged in
+                            <>
+                                <Link to="/sign-up" className="w-full sm:w-auto">
+                                    <button className="w-full sm:w-auto bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-4 px-10 rounded-2xl text-lg shadow-[0_4px_0_0_#2B6A01] active:shadow-none active:translate-y-[4px] transition-all duration-200">
+                                       Get Started
+                                    </button>
+                                </Link>
+                                <Link to="/sign-in" className="w-full sm:w-auto">
+                                    <button className="w-full sm:w-auto bg-white hover:bg-gray-50 text-[#1CB0F6] font-bold py-4 px-10 rounded-2xl text-lg border-2 border-[#E5E5E5] shadow-[0_4px_0_0_#E5E5E5] active:shadow-none active:translate-y-[4px] transition-all duration-200">
+                                        I Already Have An Account
+                                    </button>
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4 text-sm text-gray-400 font-semibold mt-6">

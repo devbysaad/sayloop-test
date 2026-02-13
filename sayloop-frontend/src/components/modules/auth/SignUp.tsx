@@ -15,158 +15,163 @@ const SignUpPage = () => {
     }, [isLoaded, isSignedIn, navigate]);
 
     return (
-        <div className="h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-6 overflow-hidden">
-        
-            <div className="absolute inset-0 pointer-events-none opacity-40">
-                <div className="absolute top-[10%] left-[10%] w-32 h-32 bg-purple-400/20 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-[15%] right-[15%] w-40 h-40 bg-pink-400/20 rounded-full blur-3xl"></div>
+        <div className="h-screen flex overflow-hidden">
+            {/* Left Side - Brand Section */}
+            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#58CC02] to-[#46A302] p-12 flex-col justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-40"></div>
+                
+                <div className="relative z-10 max-w-md mx-auto">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                            <span className="text-2xl">🦉</span>
+                        </div>
+                        <h1 className="text-2xl font-black text-white">Sayloop</h1>
+                    </div>
+
+                    <h2 className="text-4xl font-black text-white mb-4 leading-tight">
+                        Start Your<br />Learning Journey
+                    </h2>
+                    <p className="text-lg text-white/90 mb-8">
+                        Join millions mastering new languages with AI-powered lessons.
+                    </p>
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-white/90">
+                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span className="text-lg">✨</span>
+                            </div>
+                            <span className="font-medium">100% Free Forever</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/90">
+                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span className="text-lg">⚡</span>
+                            </div>
+                            <span className="font-medium">Quick 5-Min Lessons</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/90">
+                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span className="text-lg">🏆</span>
+                            </div>
+                            <span className="font-medium">Proven Results</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="w-full max-w-md relative z-10">
-                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                    {/* Logo */}
-                    <div className="flex justify-center mb-6">
-                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-                            <span className="text-3xl">🎉</span>
+            {/* Right Side - Form */}
+            <div className="flex-1 flex items-center justify-center p-6 bg-white">
+                <div className="w-full max-w-md">
+                    <div className="lg:hidden flex justify-center mb-6">
+                        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                            <span className="text-2xl">🦉</span>
                         </div>
                     </div>
 
-                    {/* Heading */}
-                    <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Start learning today</h1>
-                        <p className="text-sm text-gray-600">Join millions learning with Sayloop</p>
+                    <div className="mb-6">
+                        <h2 className="text-3xl font-black text-gray-900 mb-1">Get Started</h2>
+                        <p className="text-gray-600">Create your free account</p>
                     </div>
 
                     <SignUp.Root>
                         <SignUp.Step name="start">
-                            <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
+                            <Clerk.GlobalError className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2.5 mb-4" />
 
-                            <div className="space-y-3 mb-4">
-                                <Clerk.Connection
-                                    name="google"
-                                    className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-white border border-gray-300 hover:border-purple-500 hover:bg-purple-50 text-gray-700 font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow"
-                                >
-                                    <Clerk.Icon className="w-5 h-5" />
-                                    <span className="text-sm">Continue with Google</span>
-                                </Clerk.Connection>
-                            </div>
+                            <Clerk.Connection
+                                name="google"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 hover:border-green-400 hover:bg-green-50 rounded-xl transition-all text-sm font-semibold mb-5"
+                            >
+                                <Clerk.Icon className="w-5 h-5" />
+                                <span>Continue with Google</span>
+                            </Clerk.Connection>
 
-                            <div className="relative my-6">
+                            <div className="relative my-5">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200"></div>
+                                    <div className="w-full border-t border-gray-300"></div>
                                 </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="px-4 bg-white text-gray-500">Or sign up with email</span>
+                                <div className="relative flex justify-center text-xs">
+                                    <span className="px-3 bg-white text-gray-500 font-semibold">OR</span>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <Clerk.Field name="firstName">
-                                    <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        First name
-                                    </Clerk.Label>
-                                    <Clerk.Input
-                                        type="text"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition-all outline-none"
-                                        placeholder="John"
-                                    />
-                                    <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
-                                </Clerk.Field>
-
-                                <Clerk.Field name="lastName">
-                                    <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Last name
-                                    </Clerk.Label>
-                                    <Clerk.Input
-                                        type="text"
-                                        required
-                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition-all outline-none"
-                                        placeholder="Doe"
-                                    />
-                                    <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
-                                </Clerk.Field>
                             </div>
 
                             <Clerk.Field name="emailAddress" className="mb-4">
-                                <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                <Clerk.Label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                     Email
                                 </Clerk.Label>
                                 <Clerk.Input
                                     type="email"
                                     required
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition-all outline-none"
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-sm transition-all"
                                     placeholder="you@example.com"
                                 />
-                                <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
+                                <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
                             </Clerk.Field>
 
-                            <Clerk.Field name="password" className="mb-4">
-                                <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            <Clerk.Field name="password" className="mb-5">
+                                <Clerk.Label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                     Password
                                 </Clerk.Label>
                                 <Clerk.Input
                                     type="password"
                                     required
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition-all outline-none"
+                                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-sm transition-all"
                                     placeholder="Create a password"
                                 />
-                                <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
+                                <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
                             </Clerk.Field>
 
                             <SignUp.Action
                                 submit
-                                className="w-full py-2.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                                className="w-full py-3.5 bg-[#58CC02] hover:bg-[#46A302] text-white font-bold rounded-xl transition-all mb-4"
                             >
-                                Create account
+                                Create Account
                             </SignUp.Action>
 
-                            <p className="mt-4 text-xs text-center text-gray-500">
-                                By signing up, you agree to our{' '}
-                                <Link to="/terms" className="text-purple-600 hover:text-purple-700">
-                                    Terms
-                                </Link>{' '}
-                                and{' '}
-                                <Link to="/privacy" className="text-purple-600 hover:text-purple-700">
-                                    Privacy Policy
-                                </Link>
-                            </p>
+                            <div className="text-center text-sm space-y-2">
+                                <div>
+                                    <span className="text-gray-600">Already have an account? </span>
+                                    <Link to="/sign-in" className="text-green-600 font-semibold hover:text-green-700">
+                                        Sign in
+                                    </Link>
+                                </div>
+                                <div>
+                                    <Link to="/" className="text-gray-500 hover:text-gray-700">
+                                        ← Back to home
+                                    </Link>
+                                </div>
+                            </div>
                         </SignUp.Step>
 
                         <SignUp.Step name="verifications">
                             <SignUp.Strategy name="email_code">
-                                <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
+                                <Clerk.GlobalError className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2.5 mb-4" />
 
-                                <h2 className="text-xl font-bold text-gray-900 mb-2">Verify your email</h2>
-                                <p className="text-sm text-gray-600 mb-6">
-                                    We sent a code to <SignUp.SafeIdentifier className="font-semibold" />
+                                <h3 className="text-xl font-black text-gray-900 mb-1">Check your email</h3>
+                                <p className="text-sm text-gray-600 mb-5">
+                                    Code sent to <SignUp.SafeIdentifier className="font-semibold" />
                                 </p>
 
-                                <Clerk.Field name="code" className="mb-4">
-                                    <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Verification code
-                                    </Clerk.Label>
+                                <Clerk.Field name="code" className="mb-5">
                                     <Clerk.Input
                                         type="otp"
                                         required
-                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-lg font-semibold text-center"
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-center text-lg font-semibold tracking-widest"
                                     />
-                                    <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
+                                    <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
                                 </Clerk.Field>
 
                                 <SignUp.Action
                                     submit
-                                    className="w-full py-2.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 mb-4"
+                                    className="w-full py-3.5 bg-[#58CC02] hover:bg-[#46A302] text-white font-bold rounded-xl transition-all mb-3"
                                 >
-                                    Verify email
+                                    Verify
                                 </SignUp.Action>
 
                                 <SignUp.Action
                                     resend
-                                    className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                                    className="text-sm text-green-600 hover:text-green-700 font-medium block text-center"
                                     fallback={({ resendableAfter }) => (
-                                        <p className="text-sm text-gray-500">
-                                            Resend code in {resendableAfter} seconds
+                                        <p className="text-sm text-gray-500 text-center">
+                                            Resend in {resendableAfter}s
                                         </p>
                                     )}
                                 >
@@ -176,45 +181,58 @@ const SignUpPage = () => {
                         </SignUp.Step>
 
                         <SignUp.Step name="continue">
-                            <Clerk.GlobalError className="block text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4" />
+                            <Clerk.GlobalError className="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2.5 mb-4" />
 
-                            <h2 className="text-xl font-bold text-gray-900 mb-2">Complete your profile</h2>
-                            <p className="text-sm text-gray-600 mb-6">
-                                Tell us a bit more about yourself
-                            </p>
+                            <h3 className="text-xl font-black text-gray-900 mb-1">Complete profile</h3>
+                            <p className="text-sm text-gray-600 mb-5">Tell us about yourself</p>
 
-                            <Clerk.Field name="username" className="mb-4">
-                                <Clerk.Label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Username
-                                </Clerk.Label>
-                                <Clerk.Input
-                                    type="text"
-                                    required
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition-all outline-none"
-                                    placeholder="Choose a username"
-                                />
-                                <Clerk.FieldError className="block text-xs text-red-600 mt-1" />
-                            </Clerk.Field>
+                            <div className="space-y-3 mb-5">
+                                <Clerk.Field name="firstName">
+                                    <Clerk.Input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-sm"
+                                        placeholder="First name"
+                                    />
+                                    <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
+                                </Clerk.Field>
+
+                                <Clerk.Field name="lastName">
+                                    <Clerk.Input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-sm"
+                                        placeholder="Last name"
+                                    />
+                                    <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
+                                </Clerk.Field>
+
+                                <Clerk.Field name="username">
+                                    <Clerk.Input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none text-sm"
+                                        placeholder="Username"
+                                    />
+                                    <Clerk.FieldError className="text-xs text-red-600 mt-1.5" />
+                                </Clerk.Field>
+                            </div>
 
                             <SignUp.Action
                                 submit
-                                className="w-full py-2.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                                className="w-full py-3.5 bg-[#58CC02] hover:bg-[#46A302] text-white font-bold rounded-xl transition-all"
                             >
                                 Continue
                             </SignUp.Action>
                         </SignUp.Step>
                     </SignUp.Root>
-                    <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                        <p className="text-sm text-gray-600">
-                            Already have an account?{' '}
-                            <Link 
-                                to="/sign-in" 
-                                className="text-purple-600 font-semibold hover:text-purple-700 transition-colors"
-                            >
-                                Sign in
-                            </Link>
-                        </p>
-                    </div>
+
+                    <p className="text-xs text-center text-gray-500 mt-6">
+                        By signing up, you agree to our{' '}
+                        <Link to="/terms" className="text-gray-700 hover:underline">Terms</Link>
+                        {' & '}
+                        <Link to="/privacy" className="text-gray-700 hover:underline">Privacy</Link>
+                    </p>
                 </div>
             </div>
         </div>

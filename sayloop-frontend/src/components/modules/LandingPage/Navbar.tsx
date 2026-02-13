@@ -31,8 +31,9 @@ const Navbar = () => {
 
                 <div className="flex items-center gap-4">
                     <SignedOut>
-                        <Link to="/sign-in">
-                            <button className="bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-2.5 px-6 rounded-full text-sm uppercase tracking-wider shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+                        
+                        <Link to="/sign-up" className="w-full sm:w-auto">
+                            <button className="w-full sm:w-auto bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-2 px-6 rounded-2xl text-lg shadow-[0_4px_0_0_#2B6A01] active:shadow-none active:translate-y-[4px] transition-all duration-200">
                                 Get Started
                             </button>
                         </Link>

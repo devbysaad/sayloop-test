@@ -5,6 +5,7 @@ import BentoGrid from '../../components/modules/LandingPage/BentoGrid';
 import Stats from '../../components/modules/LandingPage/Stats';
 import CTA from '../../components/modules/LandingPage/CTA';
 import Footer from '../../components/modules/LandingPage/Footer';
+import FlagPack from '../../components/modules/LandingPage/FlagPack';
 
 type Props = {}
 
@@ -14,6 +15,7 @@ const Marketing = (props: Props) => {
       <Navbar />
       <main>
         <Hero />
+        <FlagPack />
         <Stats />
         <BentoGrid />
         <CTA />
