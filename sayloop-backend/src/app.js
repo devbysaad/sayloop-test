@@ -4,6 +4,7 @@ require('dotenv').config()
 
 // imported routes
 const courseRoute = require('./modules/courses/course.route');
+const leaderboardRoute = require('./modules/leaderboard/leaderboard.route');
 
 
 // paths
@@ -26,7 +27,7 @@ app.get('/', (req, res) => {
 
 // mount routes
 app.use(paths.COURSES, courseRoute)
-
+app.use(paths.LEADERBOARD, leaderboardRoute);
 
 
 // 404 handler
