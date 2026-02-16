@@ -1,6 +1,6 @@
 const db = require('../../config/database')
 
-const getAllCourse = async () => {
+const getAllCourses = async () => {
     try {
         const result = await db.query("SELECT * FROM course ORDER BY id ASC")
         return result.rows
@@ -90,7 +90,7 @@ const getUserCourses = async (userId) => {
 };
 module.exports = {
     getAllCourses,
-    getCourseById,
+    getCoursebyId,
     changeUserCourse,
     getUserCourses
 };
