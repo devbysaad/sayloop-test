@@ -1,25 +1,37 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const callToDB = require('./config/database');
 const app = require('./app');
-const server = express();
+const { pool } = require('./config/database');
 
+const PORT = process.env.PORT || 3000;
 
+const startServer = async () => {
+  try {
+    await pool.query('SELECT NOW()');
+    console.log('✓ Database connected');
+    
+    app.listen(PORT, () => {
+      console.log(`✓ Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('✗ Failed to start server:', error.message);
+    process.exit(1);
+  }
+};
 
-server.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-server.use(express.json());
-server.use('/api', app);
-callToDB();
-
-
-
-server.listen(5000, () => {
-  console.log(`Server running on port 5000`);
+process.on('SIGTERM', () => {
+  console.log('\nShutting down...');
+  pool.end(() => {
+    console.log('✓ Database closed');
+    process.exit(0);
+  });
 });
 
+process.on('SIGINT', () => {
+  console.log('\nShutting down...');
+  pool.end(() => {
+    console.log('✓ Database closed');
+    process.exit(0);
+  });
+});
 
-module.exports = server;
+startServer();
