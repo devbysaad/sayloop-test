@@ -1,11 +1,20 @@
-const express = require('express')
+const express           = require('express');
+const router            = express.Router();
+const courseController  = require('./course.controller');
+const { protect }       = require('../../middleware/auth.middleware');
+const { validate }      = require('../../middleware/validate.middleware');
+const { changeCourseSchema } = require('./course.validation');
+const paths             = require('../../config/constants');
 
-const router = express.Router()
-const courseController = require('./course.controller')
-const path = require('../../config/constants')
+// Public routes (no auth needed to browse courses)
+router.get(paths.GET_ALL_COURSES, courseController.getAllCourses);
 
-router.get(path.GET_ALL_COURSES, courseController.getAllCourses)
-router.post(path.CHANGE_COURSE,courseController.changeUserCourse)
+// Protected routes
+router.use(protect);
 
-router.get(path.GET_USER_COURSES, courseController.getUserCourses)
-module.exports = router
+router.get(paths.GET_USER_COURSE,          courseController.getUserCourses);
+router.post(paths.CHANGE_COURSE,           validate(changeCourseSchema), courseController.changeUserCourse);
+router.get(paths.GET_SECTIONS_BY_COURSE,   courseController.getSectionsByCourse);
+router.get(paths.GET_SECTION_IDS_BY_COURSE,courseController.getSectionIdsByCourse);
+
+module.exports = router;

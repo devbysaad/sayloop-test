@@ -1,96 +1,70 @@
-const db = require('../../config/database')
+const courseService      = require('./course.service');
+const { success, error } = require('../../utils/response');
 
-const getAllCourses = async () => {
-    try {
-        const result = await db.query("SELECT * FROM course ORDER BY id ASC")
-        return result.rows
-
-    } catch (error) {
-        console.log('Error in getAllCourses', error)
-        throw error
-    }
-}
-
-const getCoursebyId = async (courseId) => {
-    try {
-        const result = await db.query(
-            'SELECT * FROM course WHERE id = $1',
-            [courseId]
-        );
-        if (result.rows.length === 0) {
-            throw new Error('Course not found');
-        }
-
-        return result.rows[0];
-    } catch (error) {
-        console.error('Error in getCourseById:', error);
-        throw error;
-    }
-}
-
-const changeUserCourse = async (userId, newCourseId) => {
-    try {
-        await db.query(
-            'UPDATE users SET current_course_id = $1 WHERE id = $2',
-            [newCourseId, userId]
-        );
-
-        const firstLesson = await db.query(
-            `SELECT l.id as lesson_id 
-             FROM lessons l
-             INNER JOIN units u ON l.unit_id = u.id
-             WHERE u.course_id = $1
-             ORDER BY u.order_index ASC, l.order_index ASC
-             LIMIT 1`,
-            [newCourseId]
-        );
-        if (firstLesson.rows.length > 0) {
-            // Check if user course progress exists
-            const existingProgress = await db.query(
-                'SELECT * FROM user_course_progress WHERE user_id = $1 AND course_id = $2',
-                [userId, newCourseId]
-            );
-            if (existingProgress.rows.length === 0) {
-                // Create new progress entry
-                await db.query(
-                    `INSERT INTO user_course_progress (user_id, course_id, current_lesson_id)
-                 VALUES ($1, $2, $3)`,
-                    [userId, newCourseId, firstLesson.rows[0].lesson_id]
-                );
-            }
-            return {
-                newCourseId: newCourseId,
-                currentLessonId: firstLesson.rows[0].lesson_id
-            };
-        }
-        return {
-            newCourseId: newCourseId,
-            currentLessonId: null
-        };
-    } catch (error) {
-        console.error('Error in changeUserCourse:', error);
-        throw error;
-    }
-}
-
-const getUserCourses = async (userId) => {
-    try {
-        const result = await db.query(
-            `SELECT DISTINCT c.*
-         FROM course c
-         INNER JOIN user_course_progress ucp ON c.id = ucp.course_id
-         WHERE ucp.user_id = $1`,
-            [userId]
-        );
-        return result.rows;
-    } catch (error) {
-        console.error('Error in getUserCourses:', error);
-        throw error;
-    }
+// GET /api/courses/all
+const getAllCourses = async (req, res) => {
+  try {
+    const courses = await courseService.getAllCourses();
+    return success(res, courses, 'Courses fetched successfully');
+  } catch (err) {
+    console.error('Error in getAllCourses:', err);
+    return error(res, 'Failed to get courses');
+  }
 };
+
+// GET /api/courses/get/:userId
+const getUserCourses = async (req, res) => {
+  try {
+    const userId  = parseInt(req.params.userId);
+    const courses = await courseService.getUserCourses(userId);
+    return success(res, courses, 'User courses fetched successfully');
+  } catch (err) {
+    console.error('Error in getUserCourses:', err);
+    return error(res, 'Failed to get user courses');
+  }
+};
+
+// POST /api/courses/change
+const changeUserCourse = async (req, res) => {
+  try {
+    const userId    = req.user.dbId;
+    const { newCourseId } = req.body;
+    const result    = await courseService.changeUserCourse(userId, newCourseId);
+    return success(res, result, 'Course changed successfully');
+  } catch (err) {
+    console.error('Error in changeUserCourse:', err);
+    return error(res, err.message || 'Failed to change course', 400);
+  }
+};
+
+// GET /api/courses/:courseId/sections
+const getSectionsByCourse = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.courseId);
+    const sections = await courseService.getSectionsByCourse(courseId);
+    return success(res, sections, 'Sections fetched successfully');
+  } catch (err) {
+    console.error('Error in getSectionsByCourse:', err);
+    return error(res, err.message || 'Failed to get sections', 404);
+  }
+};
+
+// GET /api/courses/:courseId/sections/ids
+const getSectionIdsByCourse = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.courseId);
+    const sections = await courseService.getSectionIdsByCourse(courseId);
+    return success(res, sections, 'Section IDs fetched successfully');
+  } catch (err) {
+    console.error('Error in getSectionIdsByCourse:', err);
+    return error(res, err.message || 'Failed to get section IDs', 404);
+  }
+};
+
 module.exports = {
-    getAllCourses,
-    getCoursebyId,
-    changeUserCourse,
-    getUserCourses
+  getAllCourses,
+  getUserCourses,
+  changeUserCourse,
+  getSectionsByCourse,
+  getSectionIdsByCourse,
 };

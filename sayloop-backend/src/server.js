@@ -1,37 +1,30 @@
 require('dotenv').config();
 const app = require('./app');
-const { pool } = require('./config/database');
+const prisma = require('./config/database');
+const { startScheduler } = require('./utils/scheduler');
 
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
-    await pool.query('SELECT NOW()');
-    console.log('✓ Database connected');
-    
-    app.listen(PORT, () => {
-      console.log(`✓ Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('✗ Failed to start server:', error.message);
+    await prisma.$connect();
+    console.log('✓ Database connected (Prisma)');
+    startScheduler();
+    app.listen(PORT, () => console.log(`✓ Server running on port ${PORT}`));
+  } catch (err) {
+    console.error('✗ Failed to start server:', err.message);
     process.exit(1);
   }
 };
 
-process.on('SIGTERM', () => {
-  console.log('\nShutting down...');
-  pool.end(() => {
-    console.log('✓ Database closed');
-    process.exit(0);
-  });
-});
+const shutdown = async (signal) => {
+  console.log(`\n${signal} — shutting down...`);
+  await prisma.$disconnect();
+  console.log('✓ Database disconnected');
+  process.exit(0);
+};
 
-process.on('SIGINT', () => {
-  console.log('\nShutting down...');
-  pool.end(() => {
-    console.log('✓ Database closed');
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 startServer();
