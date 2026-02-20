@@ -20,13 +20,14 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.0",
     "@prisma/client": "^5.0.0",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.0.0",
-    "express": "^4.18.0",
+    "express": "^4.22.1",
     "express-rate-limit": "^7.0.0",
     "morgan": "^1.10.0",
     "node-cron": "^3.0.0",
     "openai": "^4.0.0",
+    "socket.io": "^4.8.3",
     "zod": "^3.22.0"
   },
   "devDependencies": {
