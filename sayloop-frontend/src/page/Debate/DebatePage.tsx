@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions } from '../../redux/service/session.saga';
 import MatchmakingScreen from '../../components/modules/sessions/MatchmakingScreen';
-import SessionScreen     from '../../components/modules/sessions/SessionScreen';
-import ResultScreen      from '../../components/modules/sessions/ResultScreen';
-import IdleScreen        from '../../components/modules/sessions/IdleScreen';
+import SessionScreen from '../../components/modules/sessions/SessionScreen';
+import ResultScreen from '../../components/modules/sessions/ResultScreen';
+import IdleScreen from '../../components/modules/sessions/IdleScreen';
 
 // 👉 Replace with real user ID from Clerk
 const MOCK_USER_ID = 1;
@@ -32,11 +32,11 @@ const DebatePage = () => {
 
   return (
     <div className="min-h-screen bg-[#F7F9FB]">
-      {status === 'idle'       && <IdleScreen       userId={MOCK_USER_ID} />}
-      {status === 'searching'  && <MatchmakingScreen userId={MOCK_USER_ID} />}
-      {status === 'matched'    && <SessionScreen     userId={MOCK_USER_ID} />}
-      {status === 'in_session' && <SessionScreen     userId={MOCK_USER_ID} />}
-      {status === 'ended'      && <ResultScreen      userId={MOCK_USER_ID} />}
+      {status === 'idle' && <IdleScreen userId={MOCK_USER_ID} />}
+      {status === 'searching' && <MatchmakingScreen userId={MOCK_USER_ID} />}
+      {status === 'matched' && <SessionScreen userId={MOCK_USER_ID} />}
+      {status === 'in_session' && <SessionScreen userId={MOCK_USER_ID} />}
+      {status === 'ended' && <ResultScreen userId={MOCK_USER_ID} />}
     </div>
   );
 };

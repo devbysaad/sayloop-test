@@ -1,50 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
-import { Mainlogo } from '../../../assets/logo'; // Adjust path if needed
+import { Mainlogo } from '../../../assets/logo';
 
 const Navbar = () => {
-    const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', fn);
+    return () => window.removeEventListener('scroll', fn);
+  }, []);
 
-    return (
-        <header className={`fixed top-4 left-0 right-0 z-[100] transition-all duration-300 flex justify-center px-4`}>
-            <div className={`
-        flex items-center justify-between px-6 py-3 rounded-full transition-all duration-300
+  return (
+    <header className="fixed top-4 left-0 right-0 z-[100] flex justify-center px-4">
+      <nav className={`flex items-center justify-between px-5 py-2.5 rounded-full transition-all duration-300 w-full
         ${scrolled
-                    ? 'bg-white/90 backdrop-blur-md shadow-lg w-full max-w-5xl border border-white/20'
-                    : 'bg-transparent w-full max-w-7xl'
-                }
-      `}>
-                <Link to="/" className="flex items-center gap-2 group">
-                    <img src={Mainlogo} alt="Sayloop" className="h-10 w-auto group-hover:scale-110 transition-transform duration-300" />
-                    <span className={`text-2xl font-extrabold tracking-tight transition-colors duration-300 ${scrolled ? 'text-[#58CC02]' : 'text-[#4B4B4B]'}`}>
-                        Sayloop
-                    </span>
-                </Link>
+          ? 'max-w-4xl bg-white/95 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-stone-200'
+          : 'max-w-6xl bg-transparent'
+        }`}>
 
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 group">
+          <img src={Mainlogo} alt="Sayloop" className="h-9 w-auto" />
+          <span className={`text-xl font-extrabold tracking-tight transition-colors duration-300
+            ${scrolled ? 'text-green-600' : 'text-stone-800'}`}>
+            Sayloop
+          </span>
+        </Link>
 
-                <div className="flex items-center gap-4">
-                    <SignedOut>
-                        
-                        <Link to="/sign-up" className="w-full sm:w-auto">
-                            <button className="w-full sm:w-auto bg-[#58CC02] hover:bg-[#46A302] text-white font-bold py-2 px-6 rounded-2xl text-lg shadow-[0_4px_0_0_#2B6A01] active:shadow-none active:translate-y-[4px] transition-all duration-200">
-                                Get Started
-                            </button>
-                        </Link>
-                    </SignedOut>
-                    <SignedIn>
-                        <UserButton afterSignOutUrl="/" />
-                    </SignedIn>
-                </div>
-            </div>
-        </header>
-    );
+        {/* Nav links (desktop) */}
+        <div className="hidden md:flex items-center gap-1">
+          {['Learn', 'Debate', 'Leaderboard'].map((item) => (
+            <Link key={item} to={`/${item.toLowerCase()}`}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150
+                ${scrolled
+                  ? 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                }`}>
+              {item}
+            </Link>
+          ))}
+        </div>
+
+        {/* Auth */}
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <Link to="/sign-in">
+              <button className={`hidden sm:block text-sm font-bold px-4 py-2 rounded-full transition-all duration-150
+                ${scrolled ? 'text-stone-600 hover:bg-stone-100' : 'text-stone-700 hover:bg-white/60'}`}>
+                Sign in
+              </button>
+            </Link>
+            <Link to="/sign-up">
+              <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold
+                                 px-5 py-2.5 rounded-full shadow-[0_3px_0_#15803d]
+                                 active:shadow-none active:translate-y-px transition-all duration-150">
+                Get Started
+              </button>
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+        </div>
+      </nav>
+    </header>
+  );
 };
 
 export default Navbar;

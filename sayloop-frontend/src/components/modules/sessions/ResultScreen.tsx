@@ -1,12 +1,15 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { sessionActions }           from '../../../redux/service/session.saga';
+import { sessionActions } from '../../../redux/service/session.saga';
 
-const ResultScreen = ({ userId }) => {
-  const dispatch          = useDispatch();
-  const { result, topic, arguments: args } = useSelector((s) => s.session);
+const ResultScreen = ({ userId }: { userId: number }) => {
+  const dispatch = useDispatch();
+  const { result, topic, arguments: args } = useSelector((s: any) => s.session);
 
-  const isPartnerLeft = result?.reason === 'partner_disconnected' || result?.reason === 'partner_skipped';
+  const isPartnerLeft =
+    result?.reason === 'partner_disconnected' || result?.reason === 'partner_skipped';
+
+  const myArgs = args.filter((a: any) => a.isMe);
 
   const handlePlayAgain = () => {
     dispatch(sessionActions.reset());
@@ -15,74 +18,151 @@ const ResultScreen = ({ userId }) => {
 
   const handleGoHome = () => {
     dispatch(sessionActions.reset());
-    dispatch(sessionActions.connect({ userId }));
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] flex flex-col items-center justify-center px-6 py-16">
+    <div className="min-h-screen bg-stone-100 flex flex-col lg:flex-row">
 
-      {/* Result icon */}
-      <div className="text-8xl mb-6 animate-bounce">
-        {isPartnerLeft ? '😢' : '🏆'}
-      </div>
+      {/* ── LEFT — result summary ───────────────────────────── */}
+      <aside className="lg:w-[44%] bg-white border-b lg:border-b-0 lg:border-r border-stone-200
+                        flex flex-col justify-between px-8 py-10 lg:px-14 lg:py-14 relative overflow-hidden">
 
-      <h2 className="text-4xl font-black text-[#4B4B4B] mb-3 text-center">
-        {isPartnerLeft ? 'Session Ended' : 'Debate Complete!'}
-      </h2>
+        {/* glow */}
+        <div className={`absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-50 pointer-events-none
+          ${isPartnerLeft ? 'bg-red-100' : 'bg-green-100'}`} />
 
-      <p className="text-gray-500 font-medium text-center mb-2 max-w-sm">
-        {result?.message || 'Great debate! Your arguments have been submitted.'}
-      </p>
-
-      {topic && (
-        <div className="bg-white border border-gray-200 rounded-full px-5 py-2 mt-4 mb-8 shadow-sm">
-          <span className="text-sm font-bold text-[#4B4B4B]">Topic: </span>
-          <span className="text-sm font-bold text-[#1CB0F6]">{topic}</span>
+        {/* brand */}
+        <div className="flex items-center gap-2 text-[11px] font-mono text-stone-400 tracking-widest uppercase relative z-10">
+          <span className={`w-2 h-2 rounded-full ${isPartnerLeft ? 'bg-red-400' : 'bg-green-500'}`} />
+          Sayloop · Session Ended
         </div>
-      )}
 
-      {/* Argument summary */}
-      {args.length > 0 && (
-        <div className="w-full max-w-lg bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 mb-8">
-          <h3 className="font-extrabold text-[#4B4B4B] mb-4 text-sm uppercase tracking-widest">
-            Your Arguments ({args.filter((a) => a.isMe).length})
-          </h3>
-          <div className="space-y-3">
-            {args.filter((a) => a.isMe).map((a) => (
-              <div key={a.id} className="bg-[#58CC02]/10 border border-[#58CC02]/30 rounded-[14px] p-3">
-                <p className="text-[#4B4B4B] text-sm leading-relaxed">{a.argument}</p>
+        {/* main result */}
+        <div className="relative z-10 my-10 lg:my-0">
+
+          {/* icon */}
+          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mb-6 shadow-sm
+            ${isPartnerLeft ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+            {isPartnerLeft ? '😢' : '🏆'}
+          </div>
+
+          <h1 className="text-3xl lg:text-4xl font-extrabold text-stone-900 leading-tight tracking-tight mb-3">
+            {isPartnerLeft ? 'Session Ended Early' : 'Debate Complete!'}
+          </h1>
+
+          <p className="text-stone-500 text-[15px] leading-relaxed max-w-xs mb-8">
+            {result?.message || 'Great session. Your arguments have been recorded.'}
+          </p>
+
+          {/* topic badge */}
+          {topic && (
+            <div className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200
+                            rounded-full px-4 py-2 mb-8">
+              <span className="text-[11px] font-mono text-stone-400 uppercase tracking-widest">Topic</span>
+              <span className="w-px h-3 bg-stone-300" />
+              <span className="text-sm font-bold text-stone-700">{topic}</span>
+            </div>
+          )}
+
+          {/* XP card */}
+          {!isPartnerLeft && (
+            <div className="flex items-center gap-4 bg-amber-50 border border-amber-200
+                            rounded-2xl px-5 py-4 max-w-xs">
+              <span className="text-3xl">⚡</span>
+              <div>
+                <p className="font-extrabold text-amber-600 text-2xl leading-none">+10 XP</p>
+                <p className="text-stone-500 text-xs mt-1">Earned for debate participation</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* footer */}
+        <p className="relative z-10 text-xs text-stone-400 flex items-center gap-1.5">
+          <span>🔒</span> Peer-to-peer · End-to-end encrypted
+        </p>
+      </aside>
+
+      {/* ── RIGHT — arguments + actions ─────────────────────── */}
+      <main className="flex-1 flex flex-col justify-center px-8 py-10 lg:px-14 lg:py-14">
+
+        {/* arguments section */}
+        {myArgs.length > 0 ? (
+          <>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold
+                               flex items-center justify-center shrink-0">⚔</span>
+              <span className="text-[11px] font-mono font-medium text-stone-400 tracking-widest uppercase">
+                Your arguments ({myArgs.length})
+              </span>
+            </div>
+
+            <div className="space-y-2.5 mb-10 max-h-72 overflow-y-auto pr-1">
+              {myArgs.map((a: any, i: number) => (
+                <div key={a.id}
+                  className="bg-white border border-stone-200 rounded-2xl px-4 py-3.5
+                             hover:border-stone-300 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-4 h-4 rounded-full bg-green-100 border border-green-300
+                                     text-green-700 text-[9px] font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest">
+                      Argument
+                    </span>
+                  </div>
+                  <p className="text-stone-700 text-sm leading-relaxed">{a.argument}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 mb-8">
+            <span className="text-5xl mb-4">📭</span>
+            <p className="text-stone-400 text-sm font-medium">No arguments submitted</p>
+            <p className="text-stone-300 text-xs mt-1">Try submitting some next time!</p>
+          </div>
+        )}
+
+        {/* stats row */}
+        {!isPartnerLeft && (
+          <div className="grid grid-cols-3 gap-2 mb-10">
+            {[
+              { val: myArgs.length, lbl: 'Arguments made' },
+              { val: '—', lbl: 'AI score' },
+              { val: '+10', lbl: 'XP earned' },
+            ].map((s) => (
+              <div key={s.lbl}
+                className="bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-center">
+                <p className="font-mono text-xl font-semibold text-stone-800">{s.val}</p>
+                <p className="text-[11px] text-stone-400 mt-1">{s.lbl}</p>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* XP earned */}
-      {!isPartnerLeft && (
-        <div className="flex items-center gap-3 bg-[#FF9600]/10 border border-[#FF9600]/30 rounded-[16px] px-6 py-4 mb-8">
-          <span className="text-3xl">⚡</span>
-          <div>
-            <p className="font-black text-[#FF9600] text-xl">+10 XP</p>
-            <p className="text-gray-500 text-xs font-medium">Debate participation</p>
-          </div>
+        {/* actions */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleGoHome}
+            className="flex-1 py-3.5 rounded-xl text-sm font-bold text-stone-600
+                       bg-white border-2 border-stone-200 hover:border-stone-400
+                       hover:-translate-y-px transition-all duration-150"
+          >
+            Go Home
+          </button>
+          <button
+            onClick={handlePlayAgain}
+            className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white
+                       bg-green-600 hover:bg-green-700
+                       shadow-[0_4px_14px_rgba(22,163,74,0.28)]
+                       hover:-translate-y-px active:translate-y-0 transition-all duration-150"
+          >
+            Debate Again 🎯
+          </button>
         </div>
-      )}
 
-      {/* Actions */}
-      <div className="flex gap-4">
-        <button
-          onClick={handleGoHome}
-          className="px-8 py-4 rounded-[16px] font-extrabold text-[#4B4B4B] bg-white border-2 border-gray-200 hover:border-gray-300 transition-all"
-        >
-          Go Home
-        </button>
-        <button
-          onClick={handlePlayAgain}
-          className="px-8 py-4 rounded-[16px] font-extrabold text-white bg-[#58CC02] shadow-[0_4px_0_#46a302] hover:shadow-[0_2px_0_#46a302] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px] transition-all"
-        >
-          Debate Again 🎯
-        </button>
-      </div>
+      </main>
     </div>
   );
 };

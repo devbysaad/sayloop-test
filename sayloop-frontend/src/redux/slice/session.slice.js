@@ -2,121 +2,157 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   // Socket connection
-  isConnected:    false,
-  socketId:       null,
+  isConnected: false,
+  socketId: null,
 
   // Matchmaking
-  status:         'idle', // idle | searching | matched | in_session | ended
+  status: 'idle', // idle | searching | matched | in_session | ended
   waitingMessage: null,
 
-  // Partner info
+  // Partner
   partner: {
-    socketId:  null,
-    userId:    null,
+    socketId: null,
+    userId: null,
   },
 
-  // Session/room
-  roomId:         null,
-  isInitiator:    false,
-  topic:          null,
+  // Session / room
+  roomId: null,
+  isInitiator: false,
+  topic: null,
 
-  // Chat messages in session
-  messages:       [],
+  // Chat
+  messages: [],
 
-  // Arguments submitted during debate
-  arguments:      [],
+  // Debate arguments
+  arguments: [],
 
-  // Session result
-  result:         null,
+  // ── Draw state ───────────────────────────────────────
+  // 'none'     → no draw offer active
+  // 'offered'  → I offered a draw, waiting for partner
+  // 'received' → partner offered me a draw, I must respond
+  drawState: 'none',
 
-  // Errors
-  error:          null,
+  // ── Session result ───────────────────────────────────
+  // outcome: 'draw' | 'resign' | 'completed' | 'opponent_disconnected'
+  result: null,
+
+  error: null,
 };
 
 const sessionSlice = createSlice({
   name: 'session',
   initialState,
   reducers: {
-    // ── Socket connection ──────────────────────────────
+    // ── Connection ────────────────────────────────────
     setConnected: (state, action) => {
       state.isConnected = true;
-      state.socketId    = action.payload.socketId;
-      state.error       = null;
+      state.socketId = action.payload.socketId;
+      state.error = null;
     },
     setDisconnected: (state) => {
       state.isConnected = false;
-      state.socketId    = null;
+      state.socketId = null;
     },
 
-    // ── Matchmaking ────────────────────────────────────
+    // ── Matchmaking ───────────────────────────────────
     setSearching: (state, action) => {
-      state.status         = 'searching';
-      state.waitingMessage = action.payload?.message ?? 'Looking for a partner...';
-      state.error          = null;
-      state.partner        = { socketId: null, userId: null };
-      state.roomId         = null;
-      state.messages       = [];
-      state.arguments      = [];
-      state.result         = null;
+      state.status = 'searching';
+      state.waitingMessage = action.payload?.message ?? 'Looking for a partner…';
+      state.error = null;
+      state.partner = { socketId: null, userId: null };
+      state.roomId = null;
+      state.messages = [];
+      state.arguments = [];
+      state.result = null;
+      state.drawState = 'none';
     },
     setWaitingMessage: (state, action) => {
       state.waitingMessage = action.payload.message;
     },
     setPartnerFound: (state, action) => {
       const { partnerId, partnerUserId, roomId, isInitiator, topic } = action.payload;
-      state.status         = 'matched';
-      state.waitingMessage = null;
-      state.partner        = { socketId: partnerId, userId: partnerUserId };
-      state.roomId         = roomId;
-      state.isInitiator    = isInitiator;
-      state.topic          = topic;
+      state.status = 'matched';
+      state.partner = { socketId: partnerId, userId: partnerUserId };
+      state.roomId = roomId;
+      state.isInitiator = isInitiator;
+      state.topic = topic;
+      state.drawState = 'none';
     },
     setInSession: (state) => {
       state.status = 'in_session';
     },
 
-    // ── Messages ───────────────────────────────────────
+    // ── Messages ──────────────────────────────────────
     addMessage: (state, action) => {
       state.messages.push({
-        id:        Date.now(),
-        from:      action.payload.userId,
-        message:   action.payload.message,
+        id: Date.now() + Math.random(),
+        from: action.payload.userId,
+        message: action.payload.message,
         timestamp: action.payload.timestamp,
-        isMe:      action.payload.isMe ?? false,
+        isMe: action.payload.isMe ?? false,
       });
     },
 
-    // ── Debate arguments ───────────────────────────────
+    // ── Arguments ─────────────────────────────────────
     addArgument: (state, action) => {
       state.arguments.push({
-        id:        Date.now(),
-        from:      action.payload.from,
-        argument:  action.payload.argument,
+        id: Date.now() + Math.random(),
+        from: action.payload.from,
+        argument: action.payload.argument,
         timestamp: action.payload.timestamp,
-        isMe:      action.payload.isMe ?? false,
+        isMe: action.payload.isMe ?? false,
       });
     },
 
-    // ── Session ended ──────────────────────────────────
+    // ── Draw state ────────────────────────────────────
+    // I offered a draw — waiting
+    setDrawOffered: (state) => {
+      state.drawState = 'offered';
+    },
+    // Partner offered a draw — I need to respond
+    setDrawReceived: (state) => {
+      state.drawState = 'received';
+    },
+    // Draw was declined (either side) — reset
+    setDrawDeclined: (state) => {
+      state.drawState = 'none';
+    },
+    // Draw accepted — session will end via setDebateEnded
+    setDrawAccepted: (state) => {
+      state.drawState = 'none';
+    },
+
+    // ── Session ended ─────────────────────────────────
     setDebateEnded: (state, action) => {
       state.status = 'ended';
+      state.drawState = 'none';
       state.result = action.payload ?? null;
     },
-    setPartnerDisconnected: (state) => {
+    setPartnerDisconnected: (state, action) => {
       state.status = 'ended';
-      state.result = { reason: 'partner_disconnected', message: 'Your partner disconnected.' };
+      state.drawState = 'none';
+      state.result = {
+        outcome: 'opponent_disconnected',
+        message: action.payload?.message ?? 'Your partner disconnected. You win.',
+        xpAwarded: action.payload?.xpAwarded ?? 30,
+      };
     },
+    // Keep for backwards compatibility — treated same as opponent disconnected
     setPartnerSkipped: (state) => {
       state.status = 'ended';
-      state.result = { reason: 'partner_skipped', message: 'Your partner skipped.' };
+      state.drawState = 'none';
+      state.result = {
+        outcome: 'opponent_disconnected',
+        message: 'Your partner left the session.',
+      };
     },
 
-    // ── Reset / leave ──────────────────────────────────
+    // ── Reset ─────────────────────────────────────────
     resetSession: () => initialState,
 
-    // ── Error ──────────────────────────────────────────
+    // ── Error ─────────────────────────────────────────
     setError: (state, action) => {
-      state.error  = action.payload;
+      state.error = action.payload;
       state.status = 'idle';
     },
   },
@@ -126,6 +162,7 @@ export const {
   setConnected, setDisconnected,
   setSearching, setWaitingMessage, setPartnerFound, setInSession,
   addMessage, addArgument,
+  setDrawOffered, setDrawReceived, setDrawDeclined, setDrawAccepted,
   setDebateEnded, setPartnerDisconnected, setPartnerSkipped,
   resetSession, setError,
 } = sessionSlice.actions;

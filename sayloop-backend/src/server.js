@@ -1,9 +1,9 @@
 require('dotenv').config();
 
-const http                = require('http');
-const app                 = require('./app');
-const prisma              = require('./config/database');
-const { initSocket }      = require('./modules/sessions/session.socket');
+const http = require('http');
+const app = require('./app');
+const prisma = require('./config/database');
+const { initSocket } = require('./modules/sessions/session.socket');
 // const { startScheduler }  = require('./scheduler');
 
 const PORT = process.env.PORT || 3000;
@@ -48,6 +48,6 @@ const shutdown = async (signal) => {
 };
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 startServer();

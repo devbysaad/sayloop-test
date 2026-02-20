@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-// Import individual flag SVG components
 import US from 'country-flag-icons/react/3x2/US';
 import ES from 'country-flag-icons/react/3x2/ES';
 import FR from 'country-flag-icons/react/3x2/FR';
@@ -12,118 +11,115 @@ import SE from 'country-flag-icons/react/3x2/SE';
 import TR from 'country-flag-icons/react/3x2/TR';
 import RU from 'country-flag-icons/react/3x2/RU';
 import PL from 'country-flag-icons/react/3x2/PL';
-import NO from 'country-flag-icons/react/3x2/NO';
 import JP from 'country-flag-icons/react/3x2/JP';
 import KR from 'country-flag-icons/react/3x2/KR';
 import CN from 'country-flag-icons/react/3x2/CN';
 import SA from 'country-flag-icons/react/3x2/SA';
 import IN from 'country-flag-icons/react/3x2/IN';
 
-const LanguageCarousel = () => {
-    const scrollContainerRef = useRef(null);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
-    const [showRightArrow, setShowRightArrow] = useState(true);
+const LANGS = [
+    { Flag: US, name: 'English', learners: '1.5B' },
+    { Flag: ES, name: 'Spanish', learners: '500M' },
+    { Flag: FR, name: 'French', learners: '300M' },
+    { Flag: DE, name: 'German', learners: '200M' },
+    { Flag: IT, name: 'Italian', learners: '90M' },
+    { Flag: BR, name: 'Portuguese', learners: '260M' },
+    { Flag: NL, name: 'Dutch', learners: '24M' },
+    { Flag: SE, name: 'Swedish', learners: '10M' },
+    { Flag: TR, name: 'Turkish', learners: '80M' },
+    { Flag: RU, name: 'Russian', learners: '258M' },
+    { Flag: PL, name: 'Polish', learners: '45M' },
+    { Flag: JP, name: 'Japanese', learners: '128M' },
+    { Flag: KR, name: 'Korean', learners: '77M' },
+    { Flag: CN, name: 'Chinese', learners: '918M' },
+    { Flag: SA, name: 'Arabic', learners: '422M' },
+    { Flag: IN, name: 'Hindi', learners: '600M' },
+];
 
-    const languages = [
-        { Flag: US, name: 'ENGLISH', bgColor: 'bg-blue-50' },
-        { Flag: ES, name: 'SPANISH', bgColor: 'bg-yellow-50' },
-        { Flag: FR, name: 'FRENCH', bgColor: 'bg-blue-50' },
-        { Flag: DE, name: 'GERMAN', bgColor: 'bg-gray-50' },
-        { Flag: IT, name: 'ITALIAN', bgColor: 'bg-green-50' },
-        { Flag: BR, name: 'PORTUGUESE', bgColor: 'bg-green-50' },
-        { Flag: NL, name: 'DUTCH', bgColor: 'bg-orange-50' },
-        { Flag: SE, name: 'SWEDISH', bgColor: 'bg-blue-50' },
-        { Flag: TR, name: 'TURKISH', bgColor: 'bg-red-50' },
-        { Flag: RU, name: 'RUSSIAN', bgColor: 'bg-blue-50' },
-        { Flag: PL, name: 'POLISH', bgColor: 'bg-red-50' },
-        { Flag: NO, name: 'NORWEGIAN', bgColor: 'bg-blue-50' },
-        { Flag: JP, name: 'JAPANESE', bgColor: 'bg-red-50' },
-        { Flag: KR, name: 'KOREAN', bgColor: 'bg-blue-50' },
-        { Flag: CN, name: 'CHINESE', bgColor: 'bg-red-50' },
-        { Flag: SA, name: 'ARABIC', bgColor: 'bg-green-50' },
-        { Flag: IN, name: 'HINDI', bgColor: 'bg-orange-50' },
-    ];
+const FlagPack = () => {
+    const ref = useRef<HTMLDivElement>(null);
+    const [showLeft, setShowLeft] = useState(false);
+    const [showRight, setShowRight] = useState(true);
+    const [active, setActive] = useState<string | null>(null);
 
-    const handleScroll = () => {
-        const container = scrollContainerRef.current;
-        if (container) {
-            setShowLeftArrow(container.scrollLeft > 0);
-            setShowRightArrow(
-                container.scrollLeft < container.scrollWidth - container.clientWidth - 10
-            );
-        }
+    const onScroll = () => {
+        const el = ref.current;
+        if (!el) return;
+        setShowLeft(el.scrollLeft > 10);
+        setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
     };
 
-    const scroll = (direction) => {
-        const container = scrollContainerRef.current;
-        if (container) {
-            const scrollAmount = direction === 'left' ? -300 : 300;
-            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-        }
+    const scroll = (dir: 'left' | 'right') => {
+        ref.current?.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
     };
 
     return (
-        <section className="relative py-6 bg-white border-b border-gray-200">
-            <div className="relative max-w-[1400px] mx-auto px-4">
-                {/* Left Arrow */}
-                {showLeftArrow && (
-                    <button
-                        onClick={() => scroll('left')}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all"
-                        aria-label="Scroll left"
-                    >
-                        <ChevronLeft className="w-6 h-6 text-gray-700" />
-                    </button>
+        <section className="py-10 bg-white border-y border-stone-200 relative">
+            <div className="max-w-[1400px] mx-auto px-4 relative">
+
+                {/* Left fade + arrow */}
+                {showLeft && (
+                    <>
+                        <div className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+                        <button onClick={() => scroll('left')}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white
+                         border border-stone-200 rounded-full shadow-md flex items-center justify-center
+                         hover:bg-stone-50 transition-all">
+                            <ChevronLeft className="w-5 h-5 text-stone-600" />
+                        </button>
+                    </>
                 )}
 
-                {/* Scrollable Container */}
-                <div
-                    ref={scrollContainerRef}
-                    onScroll={handleScroll}
-                    className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-14"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    {languages.map((language, index) => {
-                        const FlagComponent = language.Flag;
+                {/* Scrollable row */}
+                <div ref={ref} onScroll={onScroll}
+                    className="flex gap-3 overflow-x-auto px-12"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {LANGS.map((l) => {
+                        const isActive = active === l.name;
                         return (
-                            <div
-                                key={index}
-                                className="flex-shrink-0 flex items-center gap-3 px-5 py-3 bg-white  rounded-2xl hover:border-gray-300  transition-all cursor-pointer group"
+                            <button
+                                key={l.name}
+                                onClick={() => setActive(isActive ? null : l.name)}
+                                className={`flex-shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-2xl border
+                            transition-all duration-150 group
+                            ${isActive
+                                        ? 'bg-green-50 border-green-400 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]'
+                                        : 'bg-stone-50 border-stone-200 hover:bg-white hover:border-stone-400 hover:shadow-sm'
+                                    }`}
                             >
-                                {/* Flag */}
-                                <div className={`flex items-center justify-center w-12 h-12 rounded-xl overflow-hidden ${language.bgColor}  border-gray-200`}>
-                                    <FlagComponent className="w-full h-full object-cover" style={{ width: '100%', height: '100%' }} />
+                                <div className="w-10 h-7 rounded-lg overflow-hidden border border-stone-200 shrink-0">
+                                    <l.Flag className="w-full h-full object-cover" />
                                 </div>
-
-                                {/* Language Name */}
-                                <span className="text-sm font-bold text-gray-700 uppercase tracking-wide whitespace-nowrap">
-                                    {language.name}
-                                </span>
-                            </div>
+                                <div className="text-left">
+                                    <p className={`text-[13px] font-bold whitespace-nowrap
+                    ${isActive ? 'text-green-700' : 'text-stone-700'}`}>
+                                        {l.name}
+                                    </p>
+                                    <p className="text-[10px] font-mono text-stone-400">{l.learners} speakers</p>
+                                </div>
+                                {isActive && <span className="text-green-500 text-xs ml-1">✓</span>}
+                            </button>
                         );
                     })}
                 </div>
 
-                {/* Right Arrow */}
-                {showRightArrow && (
-                    <button
-                        onClick={() => scroll('right')}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all"
-                        aria-label="Scroll right"
-                    >
-                        <ChevronRight className="w-6 h-6 text-gray-700" />
-                    </button>
+                {/* Right fade + arrow */}
+                {showRight && (
+                    <>
+                        <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+                        <button onClick={() => scroll('right')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white
+                         border border-stone-200 rounded-full shadow-md flex items-center justify-center
+                         hover:bg-stone-50 transition-all">
+                            <ChevronRight className="w-5 h-5 text-stone-600" />
+                        </button>
+                    </>
                 )}
             </div>
 
-            {/* Hide Scrollbar CSS */}
-            <style jsx>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-            `}</style>
+            <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
         </section>
     );
 };
 
-export default LanguageCarousel;
+export default FlagPack;
