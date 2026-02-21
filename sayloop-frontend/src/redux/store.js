@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import createSagaMiddleware from 'redux-saga';
 import sessionReducer from './slice/session.slice';
-import rootSaga from './service/session.saga';
+import rootSaga from './saga/session.saga';
 
 const sagaMiddleware = createSagaMiddleware();
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { sessionActions } from '../../../../redux/service/session.saga';
+import { sessionActions } from '../../../../redux/saga/session.saga';
 
 interface Props {
     drawState: 'none' | 'offered' | 'received';

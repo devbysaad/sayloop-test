@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { sessionActions } from '../../../redux/service/session.saga';
+import { sessionActions } from '../../../redux/saga/session.saga';
 
 const ResultScreen = ({ userId }: { userId: number }) => {
   const dispatch = useDispatch();

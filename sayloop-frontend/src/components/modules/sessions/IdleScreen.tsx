@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { sessionActions } from '../../../redux/service/session.saga';
+import { sessionActions } from '../../../redux/saga/session.saga';
 
 const TOPICS = [
   { id: 1, label: 'AI & Society', tag: 'Technology', icon: '⚡' },
