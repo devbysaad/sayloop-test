@@ -1,156 +1,156 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
-import HeroImg from '../../../assets/PNG/hero.png';
 
-const BADGES = [
-  { emoji: '🔥', label: 'Streak', value: '12 Days', color: 'bg-orange-50 border-orange-200' },
-  { emoji: '💎', label: 'Gems',   value: '4,200',   color: 'bg-blue-50 border-blue-200'   },
-];
+const LANGS = ['Spanish 🇪🇸', 'Japanese 🇯🇵', 'French 🇫🇷', 'Arabic 🇸🇦', 'Korean 🇰🇷', 'Mandarin 🇨🇳'];
 
 const Hero = () => {
-  const { isSignedIn, isLoaded } = useUser();
-  const [ready, setReady] = useState(false);
-  const [xpPop, setXpPop] = useState(false);
+  const { isSignedIn } = useUser();
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
 
-  useEffect(() => { if (isLoaded) setReady(true); }, [isLoaded]);
   useEffect(() => {
-    const id = setTimeout(() => setXpPop(true), 1800);
-    return () => clearTimeout(id);
+    const t = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => { setIdx(i => (i + 1) % LANGS.length); setVisible(true); }, 300);
+    }, 2400);
+    return () => clearInterval(t);
   }, []);
 
   return (
-    <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden
-                        bg-stone-100 pt-28 pb-16 px-6">
-
-      {/* Background blobs */}
-      <div className="absolute top-[-8%] left-[-8%] w-96 h-96 bg-green-200/40 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-8%] right-[-5%] w-80 h-80 bg-blue-200/30 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Subtle grid texture */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{ backgroundImage: 'radial-gradient(circle, #292524 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-      <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-
-        {/* LEFT */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-7">
-
-          {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200
-                          text-green-700 text-xs font-bold uppercase tracking-widest
-                          rounded-full px-4 py-1.5">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            The smarter way to learn
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl lg:text-[4.2rem] font-extrabold text-stone-900
-                         leading-[1.08] tracking-tight">
-            Master a language,<br className="hidden lg:block" />
-            <span className="text-green-600"> unlock the world.</span>
-          </h1>
-
-          <p className="text-lg text-stone-500 max-w-md font-medium leading-relaxed">
-            Debate, practice, and level up — in the most fun, science-backed way to actually
-            become fluent.
-          </p>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            {!ready ? (
-              <div className="h-12 w-48 bg-stone-200 animate-pulse rounded-xl" />
-            ) : isSignedIn ? (
-              <Link to="/learn">
-                <button className="bg-green-600 hover:bg-green-700 text-white font-bold
-                                   py-3.5 px-8 rounded-xl text-base
-                                   shadow-[0_4px_0_#15803d] active:shadow-none active:translate-y-px
-                                   transition-all duration-150">
-                  Continue Learning →
-                </button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/sign-up">
-                  <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white
-                                     font-bold py-3.5 px-8 rounded-xl text-base
-                                     shadow-[0_4px_0_#15803d] active:shadow-none active:translate-y-px
-                                     transition-all duration-150">
-                    Get Started — It's Free
-                  </button>
-                </Link>
-                <Link to="/sign-in">
-                  <button className="w-full sm:w-auto bg-white hover:bg-stone-50 text-stone-700
-                                     font-bold py-3.5 px-8 rounded-xl text-base border-2 border-stone-200
-                                     shadow-[0_4px_0_#e7e5e4] active:shadow-none active:translate-y-px
-                                     transition-all duration-150">
-                    Sign In
-                  </button>
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Social proof */}
-          <div className="flex items-center gap-3 text-sm text-stone-400 font-semibold">
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-8 h-8 rounded-full bg-stone-200 border-2 border-white overflow-hidden">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="" />
-                </div>
-              ))}
-            </div>
-            <span>Trusted by <strong className="text-stone-600">10,000+</strong> learners</span>
-          </div>
-        </div>
-
-        {/* RIGHT — hero image + floating badges */}
-        <div className="relative flex justify-center lg:justify-end">
-          <div className="relative w-full max-w-[480px]">
-
-            <img src={HeroImg} alt="Sayloop" className="w-full drop-shadow-2xl relative z-10" />
-
-            {/* Floating XP pop */}
-            {xpPop && (
-              <div className={`absolute top-6 left-2 sm:-left-10 z-20 transition-all duration-700
-                              ${xpPop ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-                <div className="bg-white border border-amber-200 rounded-2xl px-4 py-3 shadow-xl
-                                flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center text-xl">⚡</div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">XP Earned</p>
-                    <p className="text-lg font-extrabold text-stone-800">+20 XP</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {BADGES.map((b, i) => (
-              <div key={i}
-                className={`absolute z-20 bg-white border ${b.color} rounded-2xl px-4 py-3 shadow-xl
-                            flex items-center gap-3 hidden sm:flex
-                            ${i === 0 ? 'top-1/4 -left-8' : 'bottom-24 -right-8'}
-                            animate-[float_3s_ease-in-out_infinite_${i === 1 ? '1.5s' : ''}]`}
-                style={{ animationDelay: i === 1 ? '1.5s' : '0s' }}>
-                <div className={`w-10 h-10 ${b.color} rounded-full flex items-center justify-center text-xl`}>
-                  {b.emoji}
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{b.label}</p>
-                  <p className="text-lg font-extrabold text-stone-800">{b.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
+    <>
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-8px); }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floatA  { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-14px) rotate(-2deg)} }
+        @keyframes floatB  { 0%,100%{transform:translateY(0) rotate(2deg)}  50%{transform:translateY(-10px) rotate(2deg)} }
+        .anim-1 { animation: fadeUp .6s ease both; }
+        .anim-2 { animation: fadeUp .6s .1s ease both; }
+        .anim-3 { animation: fadeUp .6s .2s ease both; }
+        .anim-4 { animation: fadeUp .6s .3s ease both; }
+        .card-a { animation: floatA 5s ease-in-out infinite; }
+        .card-b { animation: floatB 6s ease-in-out infinite 1s; }
+        .lang-word { transition: opacity .3s, transform .3s; }
       `}</style>
-    </section>
+
+      <section
+        style={{ fontFamily: "'Nunito', sans-serif", background: 'linear-gradient(160deg, #fffbf5 0%, #fff7ed 100%)' }}
+        className="min-h-screen flex items-center pt-24 pb-20 overflow-hidden relative"
+      >
+        {/* Soft blobs */}
+        <div className="absolute top-16 right-8 w-80 h-80 rounded-full pointer-events-none opacity-40"
+          style={{ background: 'radial-gradient(circle, #fde68a 0%, transparent 70%)' }} />
+        <div className="absolute bottom-8 left-4 w-64 h-64 rounded-full pointer-events-none opacity-30"
+          style={{ background: 'radial-gradient(circle, #fed7aa 0%, transparent 70%)' }} />
+
+        <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center w-full">
+
+          {/* ─ Left ─ */}
+          <div>
+            <div className="anim-1 inline-flex items-center gap-2 bg-amber-100 border-2 border-amber-300 rounded-full px-4 py-2 mb-7">
+              <span className="text-lg">🎙️</span>
+              <span className="text-amber-800 text-sm" style={{ fontWeight: 800 }}>Learn by talking to real people</span>
+            </div>
+
+            <h1 className="anim-2 text-5xl lg:text-6xl text-gray-800 leading-[1.1] mb-6" style={{ fontWeight: 900 }}>
+              Speak{' '}
+              <span
+                className="lang-word inline-block"
+                style={{ color: '#f59e0b', opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(10px)' }}
+              >
+                {LANGS[idx]}
+              </span>
+              <br />with a real<br />
+              <span style={{ color: '#f97316' }}>human today.</span>
+            </h1>
+
+            <p className="anim-3 text-gray-500 text-lg leading-relaxed mb-9 max-w-md" style={{ fontWeight: 600 }}>
+              No boring lessons. No robots. Just jump in and have a real conversation — you'll be amazed how fast you improve.
+            </p>
+
+            <div className="anim-4 flex flex-col sm:flex-row gap-4 mb-10">
+              {isSignedIn ? (
+                <Link to="/debate">
+                  <button className="text-white text-base px-9 py-4 rounded-2xl transition-all hover:-translate-y-1"
+                    style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 8px 24px rgba(251,191,36,0.45)' }}>
+                    Find someone to talk to 🚀
+                  </button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/sign-up">
+                    <button className="text-white text-base px-9 py-4 rounded-2xl transition-all hover:-translate-y-1"
+                      style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 8px 24px rgba(251,191,36,0.45)' }}>
+                      Start for free 🎉
+                    </button>
+                  </Link>
+                  <Link to="/sign-in">
+                    <button className="text-gray-600 text-base px-9 py-4 rounded-2xl border-2 border-gray-200 hover:border-amber-300 hover:-translate-y-0.5 transition-all"
+                      style={{ fontWeight: 700 }}>
+                      Log in
+                    </button>
+                  </Link>
+                </>
+              )}
+            </div>
+
+            <div className="anim-4 flex items-center gap-3">
+              <div className="flex -space-x-2.5">
+                {['#fbbf24','#f97316','#34d399','#60a5fa','#a78bfa'].map((c,i) => (
+                  <div key={i} className="w-9 h-9 rounded-full border-3 border-white flex items-center justify-center text-xs text-white font-bold"
+                    style={{ background: c, border: '2px solid white' }}>
+                    {String.fromCharCode(65+i)}
+                  </div>
+                ))}
+              </div>
+              <p className="text-gray-500 text-sm" style={{ fontWeight: 700 }}>
+                <span className="text-gray-800" style={{ fontWeight: 900 }}>14,000+</span> conversations happening right now
+              </p>
+            </div>
+          </div>
+
+          {/* ─ Right: floating cards ─ */}
+          <div className="hidden lg:flex relative h-[500px] items-center justify-center">
+            <div className="card-a absolute top-6 left-0 bg-white rounded-3xl p-5 w-72 shadow-xl" style={{ border: '2px solid #fde68a' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>😊</div>
+                <div>
+                  <p className="text-gray-800 text-sm" style={{ fontWeight: 800 }}>Ahmed · 🇸🇦</p>
+                  <p className="text-gray-400 text-xs" style={{ fontWeight: 600 }}>Learning English</p>
+                </div>
+                <div className="ml-auto bg-green-100 rounded-full px-2 py-1">
+                  <span className="text-green-600 text-[10px]" style={{ fontWeight: 800 }}>● Live</span>
+                </div>
+              </div>
+              <div className="bg-amber-50 rounded-2xl rounded-tl-sm p-3">
+                <p className="text-gray-700 text-sm leading-relaxed" style={{ fontWeight: 600 }}>"Can we practice greetings? I want to sound more natural!"</p>
+              </div>
+            </div>
+
+            <div className="card-b absolute bottom-10 right-0 bg-white rounded-3xl p-5 w-64 shadow-xl" style={{ border: '2px solid #bbf7d0' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg,#34d399,#059669)' }}>🌸</div>
+                <div>
+                  <p className="text-gray-800 text-sm" style={{ fontWeight: 800 }}>Yuki · 🇯🇵</p>
+                  <p className="text-gray-400 text-xs" style={{ fontWeight: 600 }}>Learning Spanish</p>
+                </div>
+              </div>
+              <div className="bg-green-50 rounded-2xl p-3 flex items-center gap-2">
+                <span className="text-xl">🎉</span>
+                <div>
+                  <p className="text-green-700 text-xs" style={{ fontWeight: 800 }}>Just matched!</p>
+                  <p className="text-gray-400 text-[10px]" style={{ fontWeight: 600 }}>Session starting...</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute top-1/2 -translate-y-1/2 bg-white rounded-2xl px-5 py-3 shadow-lg" style={{ border: '2px solid #fcd34d' }}>
+              <p className="text-amber-600 text-sm" style={{ fontWeight: 800 }}>🟢 340 people online now</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 };
 

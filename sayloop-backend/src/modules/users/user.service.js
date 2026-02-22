@@ -3,7 +3,7 @@ const prisma = require('../../config/database');
 // Create or sync user from Clerk (called on first login)
 const syncUser = async (clerkId, { email, firstName, lastName, pfpSource }) => {
   return prisma.user.upsert({
-    where:  { clerkId },
+    where: { clerkId },
     update: { email, firstName, lastName, pfpSource },
     create: { clerkId, email, firstName, lastName, pfpSource },
   });
@@ -47,7 +47,7 @@ const getMyProfile = async (userId) => {
 const updateProfile = async (userId, { username, firstName, lastName, pfpSource }) => {
   return prisma.user.update({
     where: { id: userId },
-    data:  { username, firstName, lastName, pfpSource },
+    data: { username, firstName, lastName, pfpSource },
   });
 };
 
@@ -65,11 +65,11 @@ const getUserStats = async (userId) => {
   ]);
 
   return {
-    points:           user.points,
-    streakLength:     user.streakLength,
-    lastSubmission:   user.lastSubmission,
+    points: user.points,
+    streakLength: user.streakLength,
+    lastSubmission: user.lastSubmission,
     lessonsCompleted,
-    rank:             rank + 1,
+    rank: rank + 1,
   };
 };
 
@@ -77,19 +77,19 @@ const getUserStats = async (userId) => {
 const addPoints = async (userId, points) => {
   return prisma.user.update({
     where: { id: userId },
-    data:  { points: { increment: points } },
+    data: { points: { increment: points } },
   });
 };
 
 // Update streak
 const updateStreak = async (userId) => {
   const user = await prisma.user.findUnique({
-    where:  { id: userId },
+    where: { id: userId },
     select: { streakLength: true, lastSubmission: true },
   });
 
-  const now      = new Date();
-  const lastSub  = user.lastSubmission ? new Date(user.lastSubmission) : null;
+  const now = new Date();
+  const lastSub = user.lastSubmission ? new Date(user.lastSubmission) : null;
   const diffHours = lastSub ? (now - lastSub) / (1000 * 60 * 60) : null;
 
   let newStreak = user.streakLength;
@@ -102,7 +102,7 @@ const updateStreak = async (userId) => {
 
   return prisma.user.update({
     where: { id: userId },
-    data:  { streakLength: newStreak, lastSubmission: now },
+    data: { streakLength: newStreak, lastSubmission: now },
   });
 };
 

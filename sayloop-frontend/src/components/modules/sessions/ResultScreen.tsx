@@ -6,164 +6,104 @@ const ResultScreen = ({ userId }: { userId: number }) => {
   const dispatch = useDispatch();
   const { result, topic, arguments: args } = useSelector((s: any) => s.session);
 
-  const isPartnerLeft =
-    result?.reason === 'partner_disconnected' || result?.reason === 'partner_skipped';
+  const isWin  = result?.outcome === 'resign' && result?.winnerId === userId;
+  const isDraw = result?.outcome === 'draw';
+  const isLoss = result?.outcome === 'resign' && !isWin;
+  const isDisc = result?.outcome === 'opponent_disconnected';
 
-  const myArgs = args.filter((a: any) => a.isMe);
+  const xp = isWin || isDisc ? 30 : isDraw ? 15 : 10;
 
-  const handlePlayAgain = () => {
-    dispatch(sessionActions.reset());
-    dispatch(sessionActions.connect({ userId }));
-  };
+  const config = isWin  ? { emoji: '🏆', title: 'You won!',            sub: 'Your opponent resigned. Great arguing!',           bg: '#fef9c3', border: '#fde047' }
+    : isDraw ? { emoji: '🤝', title: 'Draw agreed!',         sub: 'Both sides made excellent points.',             bg: '#dbeafe', border: '#93c5fd' }
+    : isLoss ? { emoji: '💪', title: 'You resigned.',         sub: 'Sometimes stepping back is wise. Try again!',   bg: '#fce7f3', border: '#f9a8d4' }
+    : isDisc ? { emoji: '🎉', title: 'Partner disconnected', sub: 'You win by default — keep the streak!',         bg: '#dcfce7', border: '#86efac' }
+    :          { emoji: '⭐', title: 'Great conversation!',   sub: 'Every session makes you a better speaker.',     bg: '#fef3c7', border: '#fcd34d' };
 
-  const handleGoHome = () => {
-    dispatch(sessionActions.reset());
-  };
+  const myArgs = (args ?? []).filter((a: any) => a.isMe);
 
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col lg:flex-row">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap');
+        @keyframes pop { from{opacity:0;transform:scale(.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .pop { animation: pop .4s ease both; }
+      `}</style>
 
-      {/* ── LEFT — result summary ───────────────────────────── */}
-      <aside className="lg:w-[44%] bg-white border-b lg:border-b-0 lg:border-r border-stone-200
-                        flex flex-col justify-between px-8 py-10 lg:px-14 lg:py-14 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center px-6 py-16"
+        style={{ fontFamily: "'Nunito', sans-serif", background: '#fffbf5' }}>
+        <div className="w-full max-w-lg pop">
 
-        {/* glow */}
-        <div className={`absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-50 pointer-events-none
-          ${isPartnerLeft ? 'bg-red-100' : 'bg-green-100'}`} />
+          {/* Result card */}
+          <div className="rounded-3xl p-8 mb-5 text-center border-2 shadow-lg"
+            style={{ background: config.bg, borderColor: config.border }}>
+            <div className="text-6xl mb-4">{config.emoji}</div>
+            <h1 className="text-3xl text-gray-800 mb-2" style={{ fontWeight: 900 }}>{config.title}</h1>
+            <p className="text-gray-600 text-base mb-6" style={{ fontWeight: 600 }}>{config.sub}</p>
 
-        {/* brand */}
-        <div className="flex items-center gap-2 text-[11px] font-mono text-stone-400 tracking-widest uppercase relative z-10">
-          <span className={`w-2 h-2 rounded-full ${isPartnerLeft ? 'bg-red-400' : 'bg-green-500'}`} />
-          Sayloop · Session Ended
-        </div>
-
-        {/* main result */}
-        <div className="relative z-10 my-10 lg:my-0">
-
-          {/* icon */}
-          <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mb-6 shadow-sm
-            ${isPartnerLeft ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
-            {isPartnerLeft ? '😢' : '🏆'}
-          </div>
-
-          <h1 className="text-3xl lg:text-4xl font-extrabold text-stone-900 leading-tight tracking-tight mb-3">
-            {isPartnerLeft ? 'Session Ended Early' : 'Debate Complete!'}
-          </h1>
-
-          <p className="text-stone-500 text-[15px] leading-relaxed max-w-xs mb-8">
-            {result?.message || 'Great session. Your arguments have been recorded.'}
-          </p>
-
-          {/* topic badge */}
-          {topic && (
-            <div className="inline-flex items-center gap-2 bg-stone-100 border border-stone-200
-                            rounded-full px-4 py-2 mb-8">
-              <span className="text-[11px] font-mono text-stone-400 uppercase tracking-widest">Topic</span>
-              <span className="w-px h-3 bg-stone-300" />
-              <span className="text-sm font-bold text-stone-700">{topic}</span>
-            </div>
-          )}
-
-          {/* XP card */}
-          {!isPartnerLeft && (
-            <div className="flex items-center gap-4 bg-amber-50 border border-amber-200
-                            rounded-2xl px-5 py-4 max-w-xs">
+            {/* XP badge */}
+            <div className="inline-flex items-center gap-3 bg-white rounded-2xl px-6 py-4 border-2 mb-5"
+              style={{ borderColor: config.border }}>
               <span className="text-3xl">⚡</span>
-              <div>
-                <p className="font-extrabold text-amber-600 text-2xl leading-none">+10 XP</p>
-                <p className="text-stone-500 text-xs mt-1">Earned for debate participation</p>
+              <div className="text-left">
+                <p className="text-amber-600 text-2xl" style={{ fontWeight: 900 }}>+{xp} XP</p>
+                <p className="text-gray-400 text-xs" style={{ fontWeight: 700 }}>earned this session</p>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* footer */}
-        <p className="relative z-10 text-xs text-stone-400 flex items-center gap-1.5">
-          <span>🔒</span> Peer-to-peer · End-to-end encrypted
-        </p>
-      </aside>
-
-      {/* ── RIGHT — arguments + actions ─────────────────────── */}
-      <main className="flex-1 flex flex-col justify-center px-8 py-10 lg:px-14 lg:py-14">
-
-        {/* arguments section */}
-        {myArgs.length > 0 ? (
-          <>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold
-                               flex items-center justify-center shrink-0">⚔</span>
-              <span className="text-[11px] font-mono font-medium text-stone-400 tracking-widest uppercase">
-                Your arguments ({myArgs.length})
-              </span>
-            </div>
-
-            <div className="space-y-2.5 mb-10 max-h-72 overflow-y-auto pr-1">
-              {myArgs.map((a: any, i: number) => (
-                <div key={a.id}
-                  className="bg-white border border-stone-200 rounded-2xl px-4 py-3.5
-                             hover:border-stone-300 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-4 h-4 rounded-full bg-green-100 border border-green-300
-                                     text-green-700 text-[9px] font-bold flex items-center justify-center">
-                      {i + 1}
-                    </span>
-                    <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest">
-                      Argument
-                    </span>
-                  </div>
-                  <p className="text-stone-700 text-sm leading-relaxed">{a.argument}</p>
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { e: '💬', v: myArgs.length,             l: 'Arguments' },
+                { e: '🎯', v: topic ?? 'General',         l: 'Topic' },
+                { e: '🏅', v: result?.outcome ?? 'done',  l: 'Outcome' },
+              ].map(s => (
+                <div key={s.l} className="bg-white rounded-2xl p-3 border" style={{ borderColor: config.border }}>
+                  <div className="text-xl mb-1">{s.e}</div>
+                  <p className="text-gray-800 text-sm truncate" style={{ fontWeight: 800 }}>{s.v}</p>
+                  <p className="text-gray-400 text-[10px]" style={{ fontWeight: 700 }}>{s.l}</p>
                 </div>
               ))}
             </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 mb-8">
-            <span className="text-5xl mb-4">📭</span>
-            <p className="text-stone-400 text-sm font-medium">No arguments submitted</p>
-            <p className="text-stone-300 text-xs mt-1">Try submitting some next time!</p>
           </div>
-        )}
 
-        {/* stats row */}
-        {!isPartnerLeft && (
-          <div className="grid grid-cols-3 gap-2 mb-10">
-            {[
-              { val: myArgs.length, lbl: 'Arguments made' },
-              { val: '—', lbl: 'AI score' },
-              { val: '+10', lbl: 'XP earned' },
-            ].map((s) => (
-              <div key={s.lbl}
-                className="bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-center">
-                <p className="font-mono text-xl font-semibold text-stone-800">{s.val}</p>
-                <p className="text-[11px] text-stone-400 mt-1">{s.lbl}</p>
+          {/* Arguments recap */}
+          {myArgs.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 mb-5 border-2 border-gray-100 shadow-sm">
+              <p className="text-gray-500 text-xs mb-4" style={{ fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Your arguments ({myArgs.length})
+              </p>
+              <div className="space-y-2.5 max-h-44 overflow-y-auto">
+                {myArgs.map((a: any, i: number) => (
+                  <div key={a.id} className="flex gap-3">
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white shrink-0 mt-0.5"
+                      style={{ fontWeight: 900, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>{i+1}</span>
+                    <p className="text-gray-600 text-sm leading-relaxed" style={{ fontWeight: 600 }}>{a.argument}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => dispatch(sessionActions.reset())}
+              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-600 text-sm hover:border-gray-300 hover:-translate-y-0.5 transition-all"
+              style={{ fontWeight: 800 }}
+            >
+              Go home
+            </button>
+            <button
+              onClick={() => { dispatch(sessionActions.reset()); dispatch(sessionActions.connect({ userId })); }}
+              className="flex-1 py-4 rounded-2xl text-white text-sm hover:-translate-y-0.5 transition-all"
+              style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 8px 22px rgba(251,191,36,0.4)' }}
+            >
+              Talk again 🎉
+            </button>
           </div>
-        )}
-
-        {/* actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleGoHome}
-            className="flex-1 py-3.5 rounded-xl text-sm font-bold text-stone-600
-                       bg-white border-2 border-stone-200 hover:border-stone-400
-                       hover:-translate-y-px transition-all duration-150"
-          >
-            Go Home
-          </button>
-          <button
-            onClick={handlePlayAgain}
-            className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white
-                       bg-green-600 hover:bg-green-700
-                       shadow-[0_4px_14px_rgba(22,163,74,0.28)]
-                       hover:-translate-y-px active:translate-y-0 transition-all duration-150"
-          >
-            Debate Again 🎯
-          </button>
         </div>
-
-      </main>
-    </div>
+      </div>
+    </>
   );
 };
 

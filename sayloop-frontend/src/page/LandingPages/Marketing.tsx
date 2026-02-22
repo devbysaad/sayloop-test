@@ -1,28 +1,22 @@
 import React from 'react';
-import Navbar from '../../components/modules/LandingPage/Navbar';
-import Hero from '../../components/modules/LandingPage/Hero';
-import BentoGrid from '../../components/modules/LandingPage/BentoGrid';
-import Stats from '../../components/modules/LandingPage/Stats';
-import CTA from '../../components/modules/LandingPage/CTA';
-import Footer from '../../components/modules/LandingPage/Footer';
-import FlagPack from '../../components/modules/LandingPage/FlagPack';
+import Navbar          from '../../components/modules/LandingPage/Navbar';
+import Hero            from '../../components/modules/LandingPage/Hero';
+import Stats           from '../../components/modules/LandingPage/Stats';
+import HowItWorks      from '../../components/modules/LandingPage/HowItWorks';
+import LanguageCarousel from '../../components/modules/LandingPage/LanguageCarousel';
+import CTA             from '../../components/modules/LandingPage/CTA';
+import Footer          from '../../components/modules/LandingPage/Footer';
 
-type Props = {}
+const LandingPage = () => (
+  <div style={{ background: '#fffbf5' }}>
+    <Navbar />
+    <Hero />
+    <Stats />
+    <HowItWorks />
+    <LanguageCarousel />
+    <CTA />
+    <Footer />
+  </div>
+);
 
-const Marketing = (props: Props) => {
-  return (
-    <div className="font-sans antialiased text-[#1A1A1A] bg-[#FFFFFF] selection:bg-[#58CC02] selection:text-white overflow-x-hidden">
-      <Navbar />
-      <main>
-        <Hero />
-        <FlagPack />
-        <Stats />
-        <BentoGrid />
-        <CTA />
-      </main>
-      <Footer />
-    </div>
-  )
-}
-
-export default Marketing;
+export default LandingPage;

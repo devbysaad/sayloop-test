@@ -1,68 +1,58 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const STATS = [
-  { icon: '👨‍🎓', value: 30,  suffix: 'M+',  label: 'Active Learners',     color: 'text-green-600'  },
-  { icon: '🌍', value: 190, suffix: '+',   label: 'Countries',            color: 'text-blue-500'   },
-  { icon: '📚', value: 1,   suffix: 'B+',  label: 'Lessons Completed',   color: 'text-amber-500'  },
-  { icon: '⭐', value: 4.8, suffix: '',    label: 'App Rating',           color: 'text-orange-500' },
+  { emoji: '🌍', value: 14000, suffix: '+', label: 'Daily conversations', color: '#fef3c7', border: '#fcd34d' },
+  { emoji: '🗣️', value: 47,    suffix: '',  label: 'Languages available', color: '#dbeafe', border: '#93c5fd' },
+  { emoji: '🌎', value: 190,   suffix: '+', label: 'Countries',           color: '#dcfce7', border: '#86efac' },
+  { emoji: '⭐', value: 4.9,   suffix: '',  label: 'App rating',          color: '#fce7f3', border: '#f9a8d4', decimal: true },
 ];
 
-const useCounter = (target: number, duration = 1800, start = false) => {
-  const [count, setCount] = useState(0);
+const useCountUp = (target: number, decimal: boolean, active: boolean) => {
+  const [v, setV] = useState(0);
   useEffect(() => {
-    if (!start) return;
-    let startTime: number | null = null;
-    const step = (ts: number) => {
-      if (!startTime) startTime = ts;
-      const progress = Math.min((ts - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(parseFloat((eased * target).toFixed(target < 10 ? 1 : 0)));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [start, target, duration]);
-  return count;
+    if (!active) return;
+    let cur = 0;
+    const steps = 60;
+    const inc = target / steps;
+    const t = setInterval(() => {
+      cur += inc;
+      if (cur >= target) { setV(target); clearInterval(t); }
+      else setV(decimal ? Math.round(cur * 10) / 10 : Math.floor(cur));
+    }, 1800 / steps);
+    return () => clearInterval(t);
+  }, [active]);
+  return v;
 };
 
-const StatCard = ({ stat, animate }: { stat: typeof STATS[0]; animate: boolean }) => {
-  const count = useCounter(stat.value, 1800, animate);
+const Card = ({ emoji, value, suffix, label, color, border, decimal }: any) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
+  const count = useCountUp(value, !!decimal, active);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setActive(true); }, { threshold: 0.3 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
   return (
-    <div className="flex flex-col items-center text-center space-y-3 group cursor-default
-                    bg-white border border-stone-200 rounded-3xl p-8
-                    hover:shadow-[0_4px_24px_rgba(0,0,0,0.07)] hover:-translate-y-1
-                    transition-all duration-300">
-      <div className="w-14 h-14 bg-stone-50 border border-stone-200 rounded-2xl
-                      flex items-center justify-center text-3xl
-                      group-hover:scale-110 transition-transform duration-300">
-        {stat.icon}
-      </div>
-      <div className={`text-4xl font-extrabold ${stat.color} font-mono tracking-tight`}>
-        {count}{stat.suffix}
-      </div>
-      <div className="text-xs font-bold text-stone-400 uppercase tracking-widest">{stat.label}</div>
+    <div ref={ref} className="rounded-3xl p-6 text-center hover:-translate-y-1 transition-all cursor-default" style={{ background: color, border: `2px solid ${border}` }}>
+      <div className="text-4xl mb-3">{emoji}</div>
+      <p className="text-4xl text-gray-800 mb-1" style={{ fontWeight: 900 }}>
+        {decimal ? count.toFixed(1) : count.toLocaleString()}{suffix}
+      </p>
+      <p className="text-gray-600 text-sm" style={{ fontWeight: 700 }}>{label}</p>
     </div>
   );
 };
 
-const Stats = () => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [animate, setAnimate] = useState(false);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setAnimate(true); }, { threshold: 0.3 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <section className="py-20 bg-stone-100 border-y border-stone-200" ref={ref}>
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STATS.map((s, i) => <StatCard key={i} stat={s} animate={animate} />)}
-        </div>
+const Stats = () => (
+  <>
+    <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');`}</style>
+    <section className="py-20 px-6 bg-white" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-5">
+        {STATS.map((s, i) => <Card key={i} {...s} />)}
       </div>
     </section>
-  );
-};
+  </>
+);
 
 export default Stats;

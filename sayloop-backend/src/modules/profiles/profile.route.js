@@ -1,13 +1,19 @@
-const express            = require('express');
-const router             = express.Router();
-const profileController  = require('./profile.controller');
-const { protect }        = require('../../middleware/auth.middleware');
-const paths              = require('../../config/constants');
+const express           = require('express');
+const router            = express.Router();
+const profileController = require('./profile.controller');
+const { protect }       = require('../../middleware/auth.middleware');
 
+// All profile routes require a valid JWT
 router.use(protect);
 
-router.get(paths.SEARCH_PROFILES,    profileController.searchProfiles);
-router.get(paths.GET_PUBLIC_PROFILE, profileController.getPublicProfile);
-router.get(paths.GET_PROFILE_STATS,  profileController.getProfileStats);
+// ORDER MATTERS — specific paths before param paths
+// GET /api/profiles/search?q=username
+router.get('/search', profileController.searchProfiles);
+
+// GET /api/profiles/:userId
+router.get('/:userId', profileController.getPublicProfile);
+
+// GET /api/profiles/:userId/stats
+router.get('/:userId/stats', profileController.getProfileStats);
 
 module.exports = router;

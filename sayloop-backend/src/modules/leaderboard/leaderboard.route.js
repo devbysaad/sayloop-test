@@ -4,13 +4,21 @@ const leaderboardController = require('./leaderboard.controller');
 const { protect }           = require('../../middleware/auth.middleware');
 const { validate }          = require('../../middleware/validate.middleware');
 const { paginationSchema }  = require('./leaderboard.validation');
-const paths                 = require('../../config/constants');
 
-// All leaderboard routes require authentication
+// All leaderboard routes require a valid JWT
 router.use(protect);
 
-router.get(paths.GET_PAGINATED_LEADERBOARD, validate(paginationSchema), leaderboardController.getPaginatedLeaderBoard);
-router.get(paths.GET_TOP_LEADERBOARD,       leaderboardController.getTopLeaderboard);
-router.get(paths.GET_USER_RANK,             leaderboardController.getUserRank);
+// GET /api/leaderboard/paginated?page=0&limit=20
+router.get(
+  '/paginated',
+  validate(paginationSchema, 'query'),   // validate req.query not req.body
+  leaderboardController.getPaginatedLeaderBoard
+);
+
+// GET /api/leaderboard/top
+router.get('/top', leaderboardController.getTopLeaderboard);
+
+// GET /api/leaderboard/rank/:userId
+router.get('/rank/:userId', leaderboardController.getUserRank);
 
 module.exports = router;

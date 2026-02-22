@@ -4,26 +4,26 @@ const { success, error } = require('../../utils/response');
 // GET /api/leaderboard/paginated?page=0&limit=20
 const getPaginatedLeaderBoard = async (req, res) => {
   try {
-    const { page = 0, limit = 20 } = req.query;
-    const leaderboard = await leaderboardService.getPaginatedLeaderBoard(
+    const { page = '0', limit = '20' } = req.query;
+    const data = await leaderboardService.getPaginatedLeaderBoard(
       parseInt(page),
       parseInt(limit)
     );
-    return success(res, leaderboard, 'Leaderboard fetched successfully');
+    return success(res, data, 'Leaderboard fetched successfully');
   } catch (err) {
-    console.error('Error in getPaginatedLeaderBoard:', err);
-    return error(res, 'Failed to get leaderboard');
+    console.error('[leaderboard] getPaginated error:', err);
+    return error(res, 'Failed to get leaderboard', 500);
   }
 };
 
 // GET /api/leaderboard/top
 const getTopLeaderboard = async (req, res) => {
   try {
-    const leaderboard = await leaderboardService.getTopLeaderboard();
-    return success(res, leaderboard, 'Top leaderboard fetched successfully');
+    const data = await leaderboardService.getTopLeaderboard();
+    return success(res, data, 'Top leaderboard fetched successfully');
   } catch (err) {
-    console.error('Error in getTopLeaderboard:', err);
-    return error(res, 'Failed to get top leaderboard');
+    console.error('[leaderboard] getTop error:', err);
+    return error(res, 'Failed to get top leaderboard', 500);
   }
 };
 
@@ -31,10 +31,12 @@ const getTopLeaderboard = async (req, res) => {
 const getUserRank = async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
-    const rank   = await leaderboardService.getUserRank(userId);
-    return success(res, rank, 'User rank fetched successfully');
+    if (isNaN(userId)) return error(res, 'Invalid userId', 400);
+
+    const data = await leaderboardService.getUserRank(userId);
+    return success(res, data, 'User rank fetched successfully');
   } catch (err) {
-    console.error('Error in getUserRank:', err);
+    console.error('[leaderboard] getUserRank error:', err);
     return error(res, err.message || 'Failed to get user rank', 404);
   }
 };

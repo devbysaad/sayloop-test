@@ -4,6 +4,9 @@ import Marketing from '../../page/LandingPages/Marketing'
 import SignInPage from '../modules/auth/SignIn'
 import SignUpPage from '../modules/auth/SignUp'
 import DebatePage from '../../page/Debate/DebatePage'
+import HomePage from '../../page/Home/Home'
+import ProfilePage from '../../page/Home/Profile'
+import LeaderboardPage from '../../page/Home/LeaderBoard'
 
 type Props = {}
 
@@ -13,6 +16,9 @@ const routes = (props: Props) => {
       <Routes>
         <Route path="/" element={<Marketing />} />
         <Route path="/learn" element={<Learn />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/debate" element={<DebatePage />} />
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />

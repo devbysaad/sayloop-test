@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
-import { Mainlogo } from '../../../assets/logo';
+import { UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -14,59 +13,89 @@ const Navbar = () => {
   }, []);
 
   return (
-    <header className="fixed top-4 left-0 right-0 z-[100] flex justify-center px-4">
-      <nav className={`flex items-center justify-between px-5 py-2.5 rounded-full transition-all duration-300 w-full
-        ${scrolled
-          ? 'max-w-4xl bg-white/95 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-stone-200'
-          : 'max-w-6xl bg-transparent'
-        }`}>
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap');`}</style>
+      <nav
+        style={{ fontFamily: "'Nunito', sans-serif" }}
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+          scrolled ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform"
+              style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>
+              💬
+            </div>
+            <span className="text-xl text-gray-800" style={{ fontWeight: 900 }}>Sayloop</span>
+          </Link>
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <img src={Mainlogo} alt="Sayloop" className="h-9 w-auto" />
-          <span className={`text-xl font-extrabold tracking-tight transition-colors duration-300
-            ${scrolled ? 'text-green-600' : 'text-stone-800'}`}>
-            Sayloop
-          </span>
-        </Link>
+          <div className="hidden md:flex items-center gap-8">
+            {['How it works', 'Languages', 'Community'].map(n => (
+              <a key={n} href="#" className="text-sm text-gray-500 hover:text-amber-500 transition-colors" style={{ fontWeight: 700 }}>{n}</a>
+            ))}
+          </div>
 
-        {/* Nav links (desktop) */}
-        <div className="hidden md:flex items-center gap-1">
-          {['Learn', 'Debate', 'Leaderboard'].map((item) => (
-            <Link key={item} to={`/${item.toLowerCase()}`}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150
-                ${scrolled
-                  ? 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
-                }`}>
-              {item}
-            </Link>
-          ))}
+          <div className="hidden md:flex items-center gap-3">
+            <SignedOut>
+              <Link to="/sign-in">
+                <button className="text-sm text-gray-600 hover:text-amber-500 px-4 py-2 transition-colors" style={{ fontWeight: 700 }}>Log in</button>
+              </Link>
+              <Link to="/sign-up">
+                <button
+                  className="text-sm text-white px-6 py-2.5 rounded-2xl hover:-translate-y-0.5 transition-all"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 4px 14px rgba(251,191,36,0.45)' }}
+                >
+                  Get started — it's free!
+                </button>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link to="/debate">
+                <button className="text-sm text-white px-6 py-2.5 rounded-2xl hover:-translate-y-0.5 transition-all"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 4px 14px rgba(251,191,36,0.45)' }}>
+                  Find a partner
+                </button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
+            <div className="space-y-1.5 w-6">
+              <span className={`block h-0.5 bg-gray-600 rounded transition-all ${open ? 'rotate-45 translate-y-2' : ''}`} />
+              <span className={`block h-0.5 bg-gray-600 rounded transition-all ${open ? 'opacity-0' : ''}`} />
+              <span className={`block h-0.5 bg-gray-600 rounded transition-all ${open ? '-rotate-45 -translate-y-2' : ''}`} />
+            </div>
+          </button>
         </div>
 
-        {/* Auth */}
-        <div className="flex items-center gap-3">
-          <SignedOut>
-            <Link to="/sign-in">
-              <button className={`hidden sm:block text-sm font-bold px-4 py-2 rounded-full transition-all duration-150
-                ${scrolled ? 'text-stone-600 hover:bg-stone-100' : 'text-stone-700 hover:bg-white/60'}`}>
-                Sign in
-              </button>
-            </Link>
-            <Link to="/sign-up">
-              <button className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold
-                                 px-5 py-2.5 rounded-full shadow-[0_3px_0_#15803d]
-                                 active:shadow-none active:translate-y-px transition-all duration-150">
-                Get Started
-              </button>
-            </Link>
-          </SignedOut>
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
-        </div>
+        {open && (
+          <div className="md:hidden bg-white border-t border-amber-50 px-6 py-5 space-y-4">
+            {['How it works', 'Languages', 'Community'].map(n => (
+              <a key={n} href="#" className="block text-sm text-gray-600 py-1" style={{ fontWeight: 700 }}>{n}</a>
+            ))}
+            <SignedOut>
+              <Link to="/sign-up">
+                <button className="w-full mt-2 text-white py-3 rounded-2xl text-sm"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>
+                  Get started free
+                </button>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link to="/debate">
+                <button className="w-full mt-2 text-white py-3 rounded-2xl text-sm"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>
+                  Find a partner
+                </button>
+              </Link>
+            </SignedIn>
+          </div>
+        )}
       </nav>
-    </header>
+    </>
   );
 };
 

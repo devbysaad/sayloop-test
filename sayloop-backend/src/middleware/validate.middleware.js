@@ -1,12 +1,20 @@
-const { error } = require('../utils/response');
+const validate = (schema, source = 'body') => (req, res, next) => {
+  const target = source === 'query' ? req.query : req.body;
 
-const validate = (schema) => (req, res, next) => {
-  const result = schema.safeParse(req.body);
+  const result = schema.safeParse(target);
+
   if (!result.success) {
     const messages = result.error.errors.map((e) => e.message).join(', ');
-    return error(res, messages, 400);
+    return res.status(400).json({ success: false, message: messages });
   }
-  req.body = result.data;
+
+  // Write parsed/transformed values back so controllers receive clean data
+  if (source === 'query') {
+    req.query = result.data;
+  } else {
+    req.body = result.data;
+  }
+
   next();
 };
 

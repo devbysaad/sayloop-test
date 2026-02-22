@@ -1,127 +1,99 @@
-import React from 'react'
-import { UserButton } from '@clerk/clerk-react'
-import { chest, heart, lingobird, lock, points, start, usaflag } from '../../../assets/RightsidebarAssets'
+import React from 'react';
+import { UserButton } from '@clerk/clerk-react';
+import { chest, heart, lingobird, lock, points, start, usaflag } from '../../../assets/RightsidebarAssets';
 
-type Props = {}
-
-const RightSidebar = (props: Props) => {
+const RightSidebar = () => {
   return (
-    <aside className="w-80  bg-[#0A0E13] text-white p-4 overflow-y-auto fixed right-0 top-0 bottom-0 hidden lg:block">
-      
-      {/* Stats Header */}
-      <div className="flex items-center justify-between mb-6 px-2">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <img src={start} alt="streak" className="w-6 h-6" />
-            <span className="text-orange-500 font-bold">0</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <img src={points} alt="gems" className="w-6 h-6" />
-            <span className="text-blue-400 font-bold">565</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <img src={heart} alt="hearts" className="w-6 h-6" />
-            <span className="text-red-500 font-bold">5</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <UserButton afterSignOutUrl="/" />
-          </span>
-        </div>
-      </div>
-
-      {/* Super Duolingo Card */}
-      <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-4 mb-6 relative overflow-hidden">
-        <div className="absolute top-2 left-2">
-          <span className="bg-white text-blue-600 text-xs font-bold px-2 py-1 rounded">SUPER</span>
-        </div>
-        <div className="absolute right-0 top-0">
-          <img src={lingobird} alt="Duo" className="w-20 h-20" />
-        </div>
-        <div className="mt-8">
-          <h3 className="text-white font-bold text-lg mb-2">Try Super for free</h3>
-          <p className="text-white text-xs mb-4 opacity-90">
-            No ads, personalized practice, and unlimited Legendary!
-          </p>
-          <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition">
-            TRY 1 WEEK FREE
-          </button>
-        </div>
-      </div>
-
-      {/* Unlock Leaderboards */}
-      <div className="border border-[#37464F] rounded-2xl p-4 mb-6">
-        <h3 className="text-white font-bold mb-3">Unlock Leaderboards!</h3>
-        <div className="flex items-center gap-3">
-          <div className="bg-[#1C2A35] rounded-xl p-3">
-            <img src={lock} alt="shield" className="w-8 h-8" />
+    <>
+      <style>{`.rs-card { transition: transform .15s; } .rs-card:hover { transform: translateY(-2px); }`}</style>
+      <aside className="hidden lg:flex" style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        width: '300px', zIndex: 40,
+        background: '#fffbf5', borderLeft: '2px solid #fef3c7',
+        flexDirection: 'column', padding: '20px 16px',
+        overflowY: 'auto', fontFamily: "'Nunito', sans-serif",
+        gap: '14px',
+      }}>
+        {/* Stats + user */}
+        <div className="rs-card" style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '18px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {[{ src: start, val: '0', color: '#f97316' }, { src: points, val: '565', color: '#3b82f6' }, { src: heart, val: '5', color: '#ef4444' }].map((s, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <img src={s.src} alt="" style={{ width: '20px', height: '20px' }} />
+                <span style={{ color: s.color, fontWeight: 900, fontSize: '14px' }}>{s.val}</span>
+              </div>
+            ))}
           </div>
-          <p className="text-gray-300 text-sm">
-            Complete <span className="font-bold text-white">9 more lessons</span> to start competing
-          </p>
+          <UserButton afterSignOutUrl="/" />
         </div>
-      </div>
 
-      {/* Daily Quests */}
-      <div className="border border-[#37464F] rounded-2xl p-4 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-bold">Daily Quests</h3>
-          <button className="text-blue-400 text-sm font-bold hover:text-blue-300">
-            VIEW ALL
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-between border border-[#37464F] rounded-xl p-3">
-          <div className="flex items-center gap-3">
-            <img src={points} alt="XP" className="w-8 h-8" />
-            <span className="text-white font-bold">Earn 10 XP</span>
+        {/* Pro card */}
+        <div className="rs-card" style={{ background: '#1a1a26', borderRadius: '20px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-30px', right: '-20px', width: '120px', height: '120px', borderRadius: '50%', background: 'radial-gradient(circle,#fde68a,transparent 65%)', opacity: 0.2 }} />
+          <span style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)', color: '#fff', fontSize: '10px', fontWeight: 900, padding: '3px 10px', borderRadius: '0 0 8px 8px', position: 'absolute', top: 0, left: '16px', letterSpacing: '1px' }}>PRO</span>
+          <div style={{ position: 'absolute', right: 0, top: 0 }}>
+            <img src={lingobird} alt="" style={{ width: '65px', height: '65px', opacity: 0.7 }} />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">0 / 10</span>
-            <img src={chest} alt="reward" className="w-6 h-6" />
+          <div style={{ marginTop: '24px' }}>
+            <h3 style={{ color: '#fffbf5', fontWeight: 900, fontSize: '15px', margin: '0 0 6px' }}>Try Sayloop Pro</h3>
+            <p style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 600, margin: '0 0 14px', lineHeight: 1.5 }}>Unlimited conversations, no ads, priority matching.</p>
+            <button style={{ width: '100%', background: 'linear-gradient(135deg,#fbbf24,#f97316)', color: '#fff', fontWeight: 800, fontSize: '12px', padding: '10px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontFamily: 'Nunito, sans-serif', boxShadow: '0 6px 18px rgba(251,191,36,0.35)' }}>
+              TRY 1 WEEK FREE
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Language Tags */}
-      <div className="border border-[#37464F] rounded-2xl p-4 mb-6">
-        <div className="flex flex-wrap gap-2">
-          <span className="bg-white text-gray-800 text-xs font-bold px-3 py-2 rounded-full border-2 border-gray-300">
-            Discover more
-          </span>
-          <span className="bg-white text-gray-800 text-xs font-bold px-3 py-2 rounded-full border-2 border-blue-500 flex items-center gap-1">
-            <img src={usaflag} alt="flag" className="w-4 h-4" />
-            duolingo abc
-          </span>
-          <span className="bg-white text-gray-800 text-xs font-bold px-3 py-2 rounded-full border-2 border-gray-300">
-            🎵 Duolingo
-          </span>
-          <span className="bg-white text-gray-800 text-xs font-bold px-3 py-2 rounded-full border-2 border-gray-300">
-            📖 Learn to Read - Duolingo ABC
-          </span>
-          <span className="bg-white text-gray-800 text-xs font-bold px-3 py-2 rounded-full border-2 border-gray-300">
-            🦉 duolingo
-          </span>
+        {/* Unlock Leaderboards */}
+        <div className="rs-card" style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '18px', padding: '16px' }}>
+          <h3 style={{ color: '#1a1a26', fontWeight: 900, fontSize: '13px', margin: '0 0 10px' }}>Unlock Leaderboards!</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: '#fef9f0', border: '2px solid #fde68a', borderRadius: '12px', padding: '10px', flexShrink: 0 }}>
+              <img src={lock} alt="lock" style={{ width: '24px', height: '24px' }} />
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '12px', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+              Complete <span style={{ fontWeight: 900, color: '#1a1a26' }}>9 more lessons</span> to start competing
+            </p>
+          </div>
         </div>
-      </div>
 
-      
-
-      {/* Footer Links */}
-      <div className="border-t border-gray-700 pt-4">
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-gray-400">
-          <a href="#" className="hover:text-gray-300">ABOUT</a>
-          <a href="#" className="hover:text-gray-300">BLOG</a>
-          <a href="#" className="hover:text-gray-300">STORE</a>
-          <a href="#" className="hover:text-gray-300">EFFICACY</a>
-          <a href="#" className="hover:text-gray-300">CAREERS</a>
-          <a href="#" className="hover:text-gray-300">INVESTORS</a>
-          <a href="#" className="hover:text-gray-300">TERMS</a>
-          <a href="#" className="hover:text-gray-300">PRIVACY</a>
+        {/* Daily Quests */}
+        <div className="rs-card" style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '18px', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h3 style={{ color: '#1a1a26', fontWeight: 900, fontSize: '13px', margin: 0 }}>Daily Quests</h3>
+            <button style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 800, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>VIEW ALL</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fef9f0', border: '2px solid #fef3c7', borderRadius: '12px', padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img src={points} alt="XP" style={{ width: '24px', height: '24px' }} />
+              <span style={{ color: '#1a1a26', fontWeight: 800, fontSize: '13px' }}>Earn 10 XP</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 700 }}>0 / 10</span>
+              <img src={chest} alt="chest" style={{ width: '20px', height: '20px' }} />
+            </div>
+          </div>
         </div>
-      </div>
 
-    </aside>
-  )
-}
+        {/* Tags */}
+        <div className="rs-card" style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '18px', padding: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+            {['Discover more', '🇺🇸 Sayloop ABC', '🎵 Sayloop', '📖 Learn to Read', '💬 sayloop'].map((tag, i) => (
+              <span key={tag} style={{ background: '#fff', color: '#374151', fontSize: '11px', fontWeight: 700, padding: '5px 10px', borderRadius: '999px', border: `2px solid ${i === 1 ? '#f59e0b' : '#e5e7eb'}`, cursor: 'pointer' }}>{tag}</span>
+            ))}
+          </div>
+        </div>
 
-export default RightSidebar
+        {/* Footer links */}
+        <div style={{ borderTop: '2px solid #fef3c7', paddingTop: '14px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 14px' }}>
+            {['ABOUT', 'BLOG', 'CAREERS', 'TERMS', 'PRIVACY'].map(l => (
+              <a key={l} href="#" style={{ color: '#9ca3af', fontSize: '10px', fontWeight: 700, textDecoration: 'none' }}>{l}</a>
+            ))}
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+export default RightSidebar;

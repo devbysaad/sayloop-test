@@ -3,144 +3,131 @@ import { useDispatch } from 'react-redux';
 import { sessionActions } from '../../../redux/saga/session.saga';
 
 const TOPICS = [
-  { id: 1, label: 'AI & Society', tag: 'Technology', icon: '⚡' },
-  { id: 2, label: 'Climate Change', tag: 'Environment', icon: '🌿' },
-  { id: 3, label: 'Future of Work', tag: 'Economics', icon: '◎' },
-  { id: 4, label: 'Social Media', tag: 'Culture', icon: '◇' },
-  { id: 5, label: 'Space Exploration', tag: 'Science', icon: '◉' },
-  { id: 6, label: 'Education System', tag: 'Society', icon: '◆' },
-];
-
-const STATS = [
-  { value: '2,400+', label: 'debates today' },
-  { value: '18 sec', label: 'avg match time' },
-  { value: '94%', label: 'satisfaction' },
+  { id: 1, label: 'Daily Life',       emoji: '☀️', bg: '#fef3c7', border: '#fcd34d' },
+  { id: 2, label: 'Travel & Culture', emoji: '✈️', bg: '#dbeafe', border: '#93c5fd' },
+  { id: 3, label: 'Food & Cooking',   emoji: '🍜', bg: '#dcfce7', border: '#86efac' },
+  { id: 4, label: 'Movies & Music',   emoji: '🎬', bg: '#fce7f3', border: '#f9a8d4' },
+  { id: 5, label: 'Technology',       emoji: '💻', bg: '#f3e8ff', border: '#d8b4fe' },
+  { id: 6, label: 'Sports & Fitness', emoji: '⚽', bg: '#fed7aa', border: '#fb923c' },
 ];
 
 const IdleScreen = ({ userId }: { userId: number }) => {
   const dispatch = useDispatch();
-  const [selected, setSelected] = useState<typeof TOPICS[0] | null>(null);
-
-  const handleFind = () => {
-    if (!selected) return;
-    dispatch(sessionActions.findPartner({ userId, topic: selected.label }));
-  };
+  const [sel, setSel] = useState<typeof TOPICS[0] | null>(null);
 
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col lg:flex-row">
+    <>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
+      <div className="min-h-screen flex flex-col lg:flex-row"
+        style={{ fontFamily: "'Nunito', sans-serif", background: '#fffbf5' }}>
 
-      {/* LEFT PANEL */}
-      <aside className="lg:w-[44%] bg-white border-b lg:border-b-0 lg:border-r border-stone-200
-                        flex flex-col justify-between px-8 py-10 lg:px-14 lg:py-14 relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-green-100 rounded-full blur-3xl opacity-60 pointer-events-none" />
+        {/* ── Left panel ─────────────────────────────── */}
+        <aside className="lg:w-[42%] bg-white flex flex-col justify-between px-8 py-12 lg:px-14 lg:py-16
+                          border-b lg:border-b-0 lg:border-r border-amber-100 relative overflow-hidden">
+          <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-30 pointer-events-none"
+            style={{ background: 'radial-gradient(circle,#fde68a,transparent 70%)' }} />
 
-        {/* Brand */}
-        <div className="flex items-center gap-2 text-[11px] font-mono text-stone-400 tracking-widest uppercase relative z-10">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          Sayloop · Live Debates
-        </div>
-
-        {/* Hero */}
-        <div className="relative z-10 my-10 lg:my-0">
-          <span className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200
-                           text-green-700 text-[11px] font-semibold tracking-widest uppercase
-                           rounded-full px-3 py-1 mb-5">
-            🎯 Sharpen your thinking
-          </span>
-          <h1 className="text-4xl lg:text-[2.7rem] font-extrabold text-stone-900 leading-[1.1] tracking-tight mb-4">
-            Debate real people.<br />
-            <span className="text-green-600">Think</span> better.
-          </h1>
-          <p className="text-stone-500 text-[15px] leading-relaxed max-w-sm mb-10">
-            Get matched with someone who disagrees with you. Make your case live on video —
-            every session sharpens your reasoning and communication.
-          </p>
-          <div className="flex gap-8">
-            {STATS.map((s) => (
-              <div key={s.label}>
-                <p className="font-mono text-xl font-medium text-stone-800">{s.value}</p>
-                <p className="text-[11px] text-stone-400 mt-0.5">{s.label}</p>
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-lg shadow-sm"
+              style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>💬</div>
+            <span className="text-gray-800 text-lg" style={{ fontWeight: 900 }}>Sayloop</span>
           </div>
-        </div>
 
-        {/* Footer */}
-        <p className="relative z-10 text-xs text-stone-400 flex items-center gap-1.5">
-          <span>🔒</span> Peer-to-peer · End-to-end encrypted
-        </p>
-      </aside>
+          <div className="relative z-10 my-10 lg:my-0">
+            <div className="text-5xl mb-5">🎯</div>
+            <h1 className="text-3xl lg:text-4xl text-gray-800 leading-snug mb-4" style={{ fontWeight: 900 }}>
+              Find someone to<br />
+              <span style={{ color: '#f59e0b' }}>practice with!</span>
+            </h1>
+            <p className="text-gray-500 text-base leading-relaxed mb-8 max-w-xs" style={{ fontWeight: 600 }}>
+              Pick a topic you love talking about. We'll match you with a real native speaker in seconds!
+            </p>
 
-      {/* RIGHT PANEL */}
-      <main className="flex-1 flex flex-col justify-center px-8 py-10 lg:px-14 lg:py-14">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { e: '🟢', v: '340', l: 'online now' },
+                { e: '⚡', v: '18s', l: 'avg match' },
+                { e: '😊', v: '94%', l: 'satisfaction' },
+              ].map(s => (
+                <div key={s.l} className="rounded-2xl p-3 text-center border-2 border-amber-100"
+                  style={{ background: '#fef9f0' }}>
+                  <div className="text-lg mb-1">{s.e}</div>
+                  <p className="text-gray-800 text-sm" style={{ fontWeight: 900 }}>{s.v}</p>
+                  <p className="text-gray-400 text-[10px]" style={{ fontWeight: 700 }}>{s.l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {/* Step 1 */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold
-                           flex items-center justify-center shrink-0">1</span>
-          <span className="text-[11px] font-mono font-medium text-stone-400 tracking-widest uppercase">
-            Choose a topic
-          </span>
-        </div>
+          <p className="text-gray-300 text-xs flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+            🔒 Encrypted · Safe · Anonymous
+          </p>
+        </aside>
 
-        <div className="grid grid-cols-2 gap-2 mb-8">
-          {TOPICS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setSelected(t)}
-              className={`relative text-left rounded-2xl p-4 border transition-all duration-150
-                ${selected?.id === t.id
-                  ? 'bg-green-50 border-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.12)]'
-                  : 'bg-white border-stone-200 hover:border-stone-400 hover:shadow-sm hover:-translate-y-px'
-                }`}
-            >
-              {selected?.id === t.id && (
-                <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-green-500 rounded-full
-                                 text-white text-[9px] font-bold flex items-center justify-center">✓</span>
-              )}
-              <span className={`text-base block mb-1.5 transition-colors
-                ${selected?.id === t.id ? 'text-green-600' : 'text-stone-400'}`}>
-                {t.icon}
-              </span>
-              <span className={`block text-[9px] font-mono tracking-widest uppercase mb-1 transition-colors
-                ${selected?.id === t.id ? 'text-green-500' : 'text-stone-400'}`}>
-                {t.tag}
-              </span>
-              <span className="block text-[13px] font-bold text-stone-800 leading-snug">{t.label}</span>
-            </button>
-          ))}
-        </div>
+        {/* ── Right panel ────────────────────────────── */}
+        <main className="flex-1 flex flex-col justify-center px-8 py-12 lg:px-14 lg:py-16">
 
-        {/* Step 2 */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold
-                           flex items-center justify-center shrink-0">2</span>
-          <span className="text-[11px] font-mono font-medium text-stone-400 tracking-widest uppercase">
-            Find your match
-          </span>
-        </div>
+          <div className="flex items-center gap-2.5 mb-6">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs text-white"
+              style={{ fontWeight: 900, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>1</div>
+            <span className="text-gray-700 text-sm" style={{ fontWeight: 800 }}>What do you want to talk about?</span>
+          </div>
 
-        <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-3 mb-10">
+            {TOPICS.map(t => {
+              const active = sel?.id === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setSel(t)}
+                  className="relative text-left rounded-2xl p-5 border-2 transition-all hover:-translate-y-0.5"
+                  style={{
+                    background: active ? t.bg : '#fff',
+                    borderColor: active ? t.border : '#e5e7eb',
+                    boxShadow: active ? '0 6px 20px rgba(0,0,0,0.08)' : '0 1px 4px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {active && (
+                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white"
+                      style={{ fontWeight: 900, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>✓</span>
+                  )}
+                  <span className="text-3xl block mb-2">{t.emoji}</span>
+                  <span className="text-gray-800 text-sm block" style={{ fontWeight: 800 }}>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs text-white"
+              style={{ fontWeight: 900, background: sel ? 'linear-gradient(135deg,#fbbf24,#f97316)' : '#d1d5db' }}>2</div>
+            <span className="text-gray-700 text-sm" style={{ fontWeight: 800 }}>Find your conversation partner!</span>
+          </div>
+
           <button
-            onClick={handleFind}
-            disabled={!selected}
-            className={`flex-1 py-3.5 rounded-xl text-sm font-bold transition-all duration-150
-              ${selected
-                ? 'bg-green-600 text-white shadow-[0_4px_14px_rgba(22,163,74,0.28)] hover:bg-green-700 hover:-translate-y-px active:translate-y-0'
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
-              }`}
+            onClick={() => sel && dispatch(sessionActions.findPartner({ userId, topic: sel.label }))}
+            disabled={!sel}
+            className="w-full py-4 rounded-2xl text-base transition-all"
+            style={sel ? {
+              fontWeight: 800, color: '#fff',
+              background: 'linear-gradient(135deg,#fbbf24,#f97316)',
+              boxShadow: '0 8px 22px rgba(251,191,36,0.45)',
+            } : {
+              fontWeight: 800, color: '#d1d5db',
+              background: '#f3f4f6', cursor: 'not-allowed',
+            }}
           >
-            {selected ? `Match me — ${selected.label}` : 'Select a topic first'}
+            {sel ? `Match me for "${sel.label}" 🚀` : 'Pick a topic first 👆'}
           </button>
-          {selected && (
-            <p className="text-xs text-stone-400 leading-relaxed max-w-[100px]">
-              Usually matched in under 30 sec.
+
+          {sel && (
+            <p className="text-center text-gray-400 text-sm mt-3" style={{ fontWeight: 600 }}>
+              Usually matched in under 18 seconds ⚡
             </p>
           )}
-        </div>
-
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 };
 

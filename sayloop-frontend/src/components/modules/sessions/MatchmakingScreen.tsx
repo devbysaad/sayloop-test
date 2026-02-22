@@ -6,84 +6,70 @@ const MatchmakingScreen = ({ userId }: { userId: number }) => {
   const dispatch = useDispatch();
   const { waitingMessage, topic } = useSelector((s: any) => s.session);
 
-  const handleCancel = () => {
-    dispatch(sessionActions.disconnect());
-    dispatch(sessionActions.reset());
-  };
-
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center px-6 py-12">
-      <div className="bg-white border border-stone-200 rounded-3xl shadow-[0_4px_40px_rgba(0,0,0,0.06)]
-                      w-full max-w-md px-10 py-14 flex flex-col items-center text-center relative overflow-hidden">
-
-        {/* top green glow */}
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-40
-                        bg-green-100 rounded-full blur-3xl opacity-70 pointer-events-none" />
-
-        {/* Ripple rings + icon */}
-        <div className="relative flex items-center justify-center w-28 h-28 mb-10">
-          <span className="absolute w-28 h-28 rounded-full border-2 border-green-400 opacity-20 animate-ping" />
-          <span className="absolute w-20 h-20 rounded-full border-2 border-green-400 opacity-30
-                           animate-ping [animation-delay:400ms]" />
-          <span className="absolute w-14 h-14 rounded-full border-2 border-green-500 opacity-50
-                           animate-ping [animation-delay:800ms]" />
-          <div className="relative z-10 w-12 h-12 rounded-full bg-green-600
-                          flex items-center justify-center text-xl shadow-[0_4px_16px_rgba(22,163,74,0.35)]">
-            🎯
-          </div>
-        </div>
-
-        {/* Topic badge */}
-        {topic && (
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200
-                          rounded-full px-4 py-1.5 mb-5">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-green-700">{topic}</span>
-          </div>
-        )}
-
-        <h2 className="text-2xl font-extrabold text-stone-900 tracking-tight mb-2">
-          Finding your match
-        </h2>
-        <p className="text-sm text-stone-500 leading-relaxed mb-8 max-w-xs">
-          {waitingMessage || 'Looking for someone with a different take on this topic…'}
-        </p>
-
-        {/* Bouncing dots */}
-        <div className="flex gap-1.5 mb-8">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="w-2.5 h-2.5 bg-green-500 rounded-full animate-bounce"
-              style={{ animationDelay: `${i * 160}ms` }}
-            />
-          ))}
-        </div>
-
-        {/* Sliding progress bar */}
-        <div className="w-full bg-stone-100 rounded-full h-1 overflow-hidden mb-8">
-          <div className="h-full bg-gradient-to-r from-green-500 to-green-300 rounded-full
-                          w-2/3 animate-[slide_2s_ease-in-out_infinite]
-                          [animation:_slide_2s_ease-in-out_infinite]" />
-        </div>
-
-        <button
-          onClick={handleCancel}
-          className="text-xs font-semibold text-stone-400 hover:text-red-500
-                     px-4 py-2 rounded-lg hover:bg-red-50 transition-all duration-150"
-        >
-          Cancel search
-        </button>
-      </div>
-
-      {/* Tailwind doesn't include this keyframe by default — add to tailwind.config if needed */}
+    <>
       <style>{`
-        @keyframes slide {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(250%);  }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap');
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes db { 0%,80%,100%{transform:translateY(0);opacity:.35} 40%{transform:translateY(-10px);opacity:1} }
+        .spin-ring { animation: spin 2.5s linear infinite; }
+        .d1{animation:db 1.3s ease infinite 0s}
+        .d2{animation:db 1.3s ease infinite .18s}
+        .d3{animation:db 1.3s ease infinite .36s}
       `}</style>
-    </div>
+
+      <div className="min-h-screen flex items-center justify-center px-6"
+        style={{ fontFamily: "'Nunito', sans-serif", background: '#fffbf5' }}>
+        <div className="w-full max-w-md text-center">
+
+          {/* Spinner */}
+          <div className="relative w-32 h-32 mx-auto mb-9">
+            <div className="spin-ring absolute inset-0 rounded-full border-4 border-dashed border-amber-300" />
+            <div className="absolute inset-4 rounded-full flex items-center justify-center text-5xl"
+              style={{ background: 'linear-gradient(135deg,#fef3c7,#fed7aa)', border: '2px solid #fcd34d' }}>
+              🔍
+            </div>
+          </div>
+
+          {topic && (
+            <div className="inline-flex items-center gap-2 bg-amber-100 border-2 border-amber-300 rounded-full px-5 py-2.5 mb-5">
+              <span className="text-xl">{
+                { 'Daily Life':'☀️', 'Travel & Culture':'✈️', 'Food & Cooking':'🍜',
+                  'Movies & Music':'🎬', 'Technology':'💻', 'Sports & Fitness':'⚽' }[topic] ?? '🎯'
+              }</span>
+              <span className="text-amber-800 text-sm" style={{ fontWeight: 800 }}>{topic}</span>
+            </div>
+          )}
+
+          <h2 className="text-3xl text-gray-800 mb-3" style={{ fontWeight: 900 }}>
+            Finding your match...
+          </h2>
+          <p className="text-gray-500 text-base mb-7" style={{ fontWeight: 600 }}>
+            {waitingMessage || 'Looking for someone to chat with!'}
+          </p>
+
+          <div className="flex justify-center gap-2.5 mb-8">
+            <span className="d1 w-3.5 h-3.5 rounded-full inline-block bg-amber-400" />
+            <span className="d2 w-3.5 h-3.5 rounded-full inline-block bg-orange-400" />
+            <span className="d3 w-3.5 h-3.5 rounded-full inline-block bg-amber-400" />
+          </div>
+
+          <div className="bg-white rounded-2xl border-2 border-amber-100 px-6 py-4 mb-8 shadow-sm">
+            <p className="text-gray-600 text-sm" style={{ fontWeight: 600 }}>
+              ⚡ Average wait is just <strong className="text-gray-800">18 seconds</strong>
+            </p>
+          </div>
+
+          <button
+            onClick={() => { dispatch(sessionActions.disconnect()); dispatch(sessionActions.reset()); }}
+            className="text-gray-400 hover:text-red-400 text-sm transition-colors"
+            style={{ fontWeight: 700 }}
+          >
+            Cancel search
+          </button>
+        </div>
+      </div>
+    </>
   );
 };
 
