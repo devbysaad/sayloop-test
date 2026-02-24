@@ -53,6 +53,8 @@ model User {
   userMonthlyChallenges UserMonthlyChallenge[]
   following             Follow[]               @relation("Follower")
   followers             Follow[]               @relation("Followed")
+  matchesRequested      Match[]                @relation("MatchRequester")
+  matchesReceived       Match[]                @relation("MatchReceiver")
 
   @@index([points(sort: Desc), id(sort: Asc)], map: "ix_users_points_desc")
   @@index([clerkId],          map: "ix_users_clerk_id")
@@ -65,10 +67,10 @@ model User {
 // ============================================================================
 
 model QuestDefinition {
-  id           Int    @id @default(autoincrement())
-  code         String @unique @db.VarChar(255)
+  id           Int     @id @default(autoincrement())
+  code         String  @unique @db.VarChar(255)
   target       Int
-  rewardPoints Int    @map("reward_points")
+  rewardPoints Int     @map("reward_points")
   active       Boolean @default(true)
 
   userDailyQuests UserDailyQuest[]
@@ -77,10 +79,10 @@ model QuestDefinition {
 }
 
 model MonthlyChallengeDefinition {
-  id           Int    @id @default(autoincrement())
-  code         String @unique @db.VarChar(255)
+  id           Int     @id @default(autoincrement())
+  code         String  @unique @db.VarChar(255)
   target       Int
-  rewardPoints Int    @map("reward_points")
+  rewardPoints Int     @map("reward_points")
   active       Boolean @default(true)
 
   userMonthlyChallenges UserMonthlyChallenge[]
@@ -89,30 +91,30 @@ model MonthlyChallengeDefinition {
 }
 
 model UserDailyQuest {
-  userId        Int      @map("user_id")
-  questDefId    Int      @map("quest_def_id")
-  date          DateTime @db.Date
-  progress      Int      @default(0)
+  userId        Int       @map("user_id")
+  questDefId    Int       @map("quest_def_id")
+  date          DateTime  @db.Date
+  progress      Int       @default(0)
   completedAt   DateTime? @map("completed_at")
-  rewardClaimed Boolean  @default(false) @map("reward_claimed")
+  rewardClaimed Boolean   @default(false) @map("reward_claimed")
 
   user     User            @relation(fields: [userId],     references: [id], onDelete: Cascade)
   questDef QuestDefinition @relation(fields: [questDefId], references: [id], onDelete: Cascade)
 
   @@id([userId, questDefId, date])
-  @@index([userId, date],  map: "idx_user_daily_quest_user_date")
-  @@index([questDefId],    map: "idx_user_daily_quest_def_id")
+  @@index([userId, date], map: "idx_user_daily_quest_user_date")
+  @@index([questDefId],   map: "idx_user_daily_quest_def_id")
   @@map("user_daily_quest")
 }
 
 model UserMonthlyChallenge {
-  userId         Int      @map("user_id")
-  challengeDefId Int      @map("challenge_def_id")
+  userId         Int       @map("user_id")
+  challengeDefId Int       @map("challenge_def_id")
   year           Int
   month          Int
-  progress       Int      @default(0)
+  progress       Int       @default(0)
   completedAt    DateTime? @map("completed_at")
-  rewardClaimed  Boolean  @default(false) @map("reward_claimed")
+  rewardClaimed  Boolean   @default(false) @map("reward_claimed")
 
   user         User                       @relation(fields: [userId],         references: [id], onDelete: Cascade)
   challengeDef MonthlyChallengeDefinition @relation(fields: [challengeDefId], references: [id], onDelete: Cascade)
@@ -152,8 +154,8 @@ model Unit {
   color         String?  @db.VarChar(255)
   createdAt     DateTime @default(now()) @map("created_at")
 
-  course   Course    @relation(fields: [courseId],   references: [id], onDelete: Cascade)
-  section  Section   @relation(fields: [sectionId],  references: [id], onDelete: Cascade)
+  course   Course    @relation(fields: [courseId],  references: [id], onDelete: Cascade)
+  section  Section   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   lessons  Lesson[]
   pathIcon PathIcon?
 
@@ -201,7 +203,7 @@ model Exercise {
   prompt     String @db.VarChar(255)
   orderIndex Int    @map("order_index")
 
-  lesson           Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson           Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   exerciseOptions  ExerciseOption[]
   exerciseAttempts ExerciseAttempt[]
 
@@ -316,4 +318,29 @@ model Follow {
   @@index([followerId],              map: "idx_follows_follower")
   @@index([followedId],              map: "idx_follows_followed")
   @@map("follows")
+}
+
+// ============================================================================
+// MATCHMAKING
+// ============================================================================
+
+model Match {
+  id          Int      @id @default(autoincrement())
+  requesterId Int      @map("requester_id")
+  receiverId  Int      @map("receiver_id")
+  topic       String   @db.VarChar(100)
+  status      String   @default("PENDING") @db.VarChar(20)
+  // status values: PENDING | ACCEPTED | REJECTED | COMPLETED | EXPIRED
+  sessionId   String?  @map("session_id") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  requester User @relation("MatchRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("MatchReceiver",  fields: [receiverId],  references: [id], onDelete: Cascade)
+
+  @@index([requesterId],       map: "idx_matches_requester")
+  @@index([receiverId],        map: "idx_matches_receiver")
+  @@index([status, createdAt], map: "idx_matches_status_created")
+  @@index([sessionId],         map: "idx_matches_session")
+  @@map("matches")
 }

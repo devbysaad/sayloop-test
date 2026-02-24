@@ -1,24 +1,16 @@
-const express               = require('express');
-const router                = express.Router();
+const express = require('express');
+const router = express.Router();
 const leaderboardController = require('./leaderboard.controller');
-const { protect }           = require('../../middleware/auth.middleware');
-const { validate }          = require('../../middleware/validate.middleware');
-const { paginationSchema }  = require('./leaderboard.validation');
-
-// All leaderboard routes require a valid JWT
-router.use(protect);
+const { protect, requireAuth } = require('../../middleware/auth.middleware');
 
 // GET /api/leaderboard/paginated?page=0&limit=20
-router.get(
-  '/paginated',
-  validate(paginationSchema, 'query'),   // validate req.query not req.body
-  leaderboardController.getPaginatedLeaderBoard
-);
+router.get('/paginated', requireAuth, leaderboardController.getPaginated);
 
-// GET /api/leaderboard/top
-router.get('/top', leaderboardController.getTopLeaderboard);
+// GET /api/leaderboard/top?limit=10
+// Authenticated — prevent PII leak of user IDs and streak data (audit: H-4)
+router.get('/top', protect, leaderboardController.getTop);
 
 // GET /api/leaderboard/rank/:userId
-router.get('/rank/:userId', leaderboardController.getUserRank);
+router.get('/rank/:userId', requireAuth, leaderboardController.getUserRank);
 
 module.exports = router;

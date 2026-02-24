@@ -1,212 +1,175 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 export type SessionStatus =
   | 'idle'
-  | 'connecting'
   | 'searching'
-  | 'waiting'
-  | 'partner_found'
+  | 'matched'
   | 'in_session'
-  | 'ended'
-  | 'error';
+  | 'ended';
+
+export type DrawState = 'none' | 'offered' | 'received';
+
+export interface Partner {
+  userId: number;
+  socketId: string;
+  username: string | null;
+  firstName: string | null;
+  pfpSource: string | null;
+}
 
 export interface ChatMessage {
-  userId:    string;
-  message:   string;
+  id: string;
+  userId: number;
+  message: string;
+  isMe: boolean;
   timestamp: string;
-  isMe:      boolean;
 }
 
 export interface Argument {
-  from:      string;
-  argument:  string;
+  id: string;
+  userId: number;
+  argument: string;
+  isMe: boolean;
   timestamp: string;
-  isMe:      boolean;
 }
 
-export interface Partner {
-  socketId: string;
-  userId:   string;
-}
-
-export interface DebateResult {
-  winner?:  string;
-  reason?:  string;
-  scores?:  Record<string, number>;
-  [key: string]: any;
-}
-
-interface DrawState {
-  offered:  boolean;
-  received: boolean;
-  accepted: boolean;
-  declined: boolean;
+export interface SessionResult {
+  outcome: 'resign' | 'draw' | 'opponent_disconnected';
+  winnerId: number | null;
+  xpEarned: number;
+  sessionId?: string;
 }
 
 interface SessionState {
-  status:          SessionStatus;
-  socketId:        string | null;
-  roomId:          string | null;
-  partner:         Partner | null;
-  isInitiator:     boolean;
-  topic:           string | null;
-  messages:        ChatMessage[];
-  arguments:       Argument[];
-  draw:            DrawState;
-  debateResult:    DebateResult | null;
-  waitingMessage:  string | null;
-  error:           string | null;
+  status: SessionStatus;
+  sessionId: string | null;
+  topic: string | null;
+  partner: Partner | null;
+  isInitiator: boolean;
+  messages: ChatMessage[];
+  arguments: Argument[];
+  drawState: DrawState;
+  debateResult: SessionResult | null;
+  waitingMessage: string | null;
+  error: string | null;
 }
 
-// ── Initial state ─────────────────────────────────────────────────────────────
-
 const initialState: SessionState = {
-  status:         'idle',
-  socketId:       null,
-  roomId:         null,
-  partner:        null,
-  isInitiator:    false,
-  topic:          null,
-  messages:       [],
-  arguments:      [],
-  draw: {
-    offered:  false,
-    received: false,
-    accepted: false,
-    declined: false,
-  },
-  debateResult:   null,
+  status: 'idle',
+  sessionId: null,
+  topic: null,
+  partner: null,
+  isInitiator: false,
+  messages: [],
+  arguments: [],
+  drawState: 'none',
+  debateResult: null,
   waitingMessage: null,
-  error:          null,
+  error: null,
 };
 
-// ── Slice ─────────────────────────────────────────────────────────────────────
-
+// ─── Slice ────────────────────────────────────────────────────────────────────
 const sessionSlice = createSlice({
   name: 'session',
   initialState,
   reducers: {
 
-    // Connection
-    setConnected: (state, action: PayloadAction<{ socketId: string }>) => {
-      state.socketId = action.payload.socketId;
-      state.status   = 'connecting';
-      state.error    = null;
-    },
-    setDisconnected: (state) => {
-      state.socketId = null;
-      state.status   = 'idle';
+    // FIX: setSearching now takes topic as payload.
+    // Previously called with no payload, then line 91 tried to read action.payload.topic → crash.
+    setSearching(state, action: PayloadAction<{ topic: string }>) {
+      state.status = 'searching';
+      state.topic = action.payload.topic;
+      state.error = null;
+      state.debateResult = null;
     },
 
-    // Matchmaking
-    setSearching: (state, action: PayloadAction<{ message?: string }>) => {
-      state.status         = 'searching';
-      state.waitingMessage = action.payload.message ?? 'Looking for a partner...';
-      state.error          = null;
+    setWaitingMessage(state, action: PayloadAction<string>) {
+      state.waitingMessage = action.payload;
     },
-    setWaitingMessage: (state, action: PayloadAction<{ message: string }>) => {
-      state.status         = 'waiting';
-      state.waitingMessage = action.payload.message;
-    },
-    setPartnerFound: (
-      state,
-      action: PayloadAction<{
-        partnerId:     string;
-        partnerUserId: string;
-        roomId:        string;
-        isInitiator:   boolean;
-        topic:         string;
-      }>
-    ) => {
-      state.status      = 'partner_found';
-      state.roomId      = action.payload.roomId;
+
+    setMatched(state, action: PayloadAction<{
+      sessionId: string;
+      partner: Partner;
+      isInitiator: boolean;
+    }>) {
+      state.status = 'matched';
+      state.sessionId = action.payload.sessionId;
+      state.partner = action.payload.partner;
       state.isInitiator = action.payload.isInitiator;
-      state.topic       = action.payload.topic;
-      state.partner     = {
-        socketId: action.payload.partnerId,
-        userId:   action.payload.partnerUserId,
-      };
       state.waitingMessage = null;
     },
-    setInSession: (state) => {
+
+    setInSession(state) {
       state.status = 'in_session';
     },
 
-    // Chat
-    addMessage: (state, action: PayloadAction<ChatMessage>) => {
-      state.messages.push(action.payload);
+    receiveMessage(state, action: PayloadAction<{
+      userId: number;
+      message: string;
+      isMe: boolean;
+      timestamp: string;
+    }>) {
+      state.messages.push({
+        id: `${Date.now()}-${Math.random()}`,
+        ...action.payload,
+      });
     },
 
-    // Debate arguments
-    addArgument: (state, action: PayloadAction<Argument>) => {
-      state.arguments.push(action.payload);
+    receiveArgument(state, action: PayloadAction<{
+      userId: number;
+      argument: string;
+      isMe: boolean;
+      timestamp: string;
+    }>) {
+      state.arguments.push({
+        id: `${Date.now()}-${Math.random()}`,
+        ...action.payload,
+      });
     },
 
-    // Draw system
-    setDrawOffered: (state) => {
-      state.draw.offered = true;
-    },
-    setDrawReceived: (state) => {
-      state.draw.received = true;
-    },
-    setDrawAccepted: (state) => {
-      state.draw.accepted = true;
-      state.draw.received = false;
-      state.draw.offered  = false;
-    },
-    setDrawDeclined: (state) => {
-      state.draw.declined = true;
-      state.draw.offered  = false;
-      state.draw.received = false;
+    setDrawOffered(state) {
+      state.drawState = 'offered';
     },
 
-    // Session end
-    setDebateEnded: (state, action: PayloadAction<DebateResult>) => {
-      state.status       = 'ended';
+    setDrawReceived(state) {
+      state.drawState = 'received';
+    },
+
+    setDrawNone(state) {
+      state.drawState = 'none';
+    },
+
+    setResult(state, action: PayloadAction<SessionResult>) {
+      state.status = 'ended';
       state.debateResult = action.payload;
-    },
-    setPartnerDisconnected: (state, action: PayloadAction<any>) => {
-      state.status       = 'ended';
-      state.debateResult = { reason: 'partner_disconnected', ...action.payload };
-    },
-    setPartnerSkipped: (state) => {
-      state.partner    = null;
-      state.roomId     = null;
-      state.status     = 'searching';
-      state.messages   = [];
-      state.arguments  = [];
-      state.draw       = { offered: false, received: false, accepted: false, declined: false };
+      state.drawState = 'none';
     },
 
-    // Error + reset
-    setError: (state, action: PayloadAction<string>) => {
-      state.status = 'error';
-      state.error  = action.payload;
+    setSessionError(state, action: PayloadAction<string>) {
+      state.error = action.payload;
+      state.status = 'idle';
     },
-    resetSession: () => initialState,
+
+    resetSession() {
+      return initialState;
+    },
   },
 });
 
 export const {
-  setConnected,
-  setDisconnected,
   setSearching,
   setWaitingMessage,
-  setPartnerFound,
+  setMatched,
   setInSession,
-  addMessage,
-  addArgument,
+  receiveMessage,
+  receiveArgument,
   setDrawOffered,
   setDrawReceived,
-  setDrawAccepted,
-  setDrawDeclined,
-  setDebateEnded,
-  setPartnerDisconnected,
-  setPartnerSkipped,
-  setError,
+  setDrawNone,
+  setResult,
+  setSessionError,
   resetSession,
 } = sessionSlice.actions;
 

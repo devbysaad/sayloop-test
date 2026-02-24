@@ -1,12 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions } from '../../../../redux/saga/session.saga';
-import { useWebRTC }  from './Userwebrtc';
-import VideoArea      from './Videoarea';
-import ControlBar     from './Controlbar';
-import SidePanel      from './Sidepanel';
-import DrawBanner     from './Drawbanner';
-import ResignModal    from './Resignmodal';
+import { useWebRTC } from './Userwebrtc';
+import VideoArea from './Videoarea';
+import ControlBar from './Controlbar';
+import SidePanel from './Sidepanel';
+import DrawBanner from './Drawbanner';
+import ResignModal from './Resignmodal';
 
 interface Props {
   userId: number;
@@ -16,7 +16,7 @@ const SessionScreen = ({ userId }: Props) => {
   const dispatch = useDispatch();
   const { topic, drawState } = useSelector((s: any) => s.session);
 
-  const localRef  = useRef<HTMLVideoElement>(null);
+  const localRef = useRef<HTMLVideoElement>(null);
   const remoteRef = useRef<HTMLVideoElement>(null);
 
   const { state: rtc, actions: rtcActions } = useWebRTC(localRef, remoteRef, userId);
@@ -46,7 +46,7 @@ const SessionScreen = ({ userId }: Props) => {
   };
 
   return (
-    <div className="h-screen bg-stone-900 flex flex-col overflow-hidden relative select-none">
+    <div className="h-screen bg-stone-950 flex flex-col overflow-hidden relative select-none font-sans">
 
       {/* Draw offer banner (shows when drawState is offered or received) */}
       <DrawBanner drawState={drawState} />
@@ -60,31 +60,35 @@ const SessionScreen = ({ userId }: Props) => {
       )}
 
       {/* Top bar: brand, topic badge, live timer */}
-      <header className="flex items-center justify-between px-5 py-3 bg-stone-900 border-b border-stone-800 shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] font-mono text-stone-500 tracking-widest uppercase hidden sm:block">
-            Sayloop
-          </span>
-          {topic && (
-            <span className="flex items-center gap-1.5 bg-stone-800 border border-stone-700 text-stone-300 text-xs font-semibold rounded-full px-3 py-1.5">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              {topic}
+      <header className="flex items-center justify-between px-6 py-4 bg-stone-900 border-b-2 border-stone-800/50 shrink-0 z-10 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center text-sm shadow-lg shadow-orange-500/20">💬</div>
+            <span className="text-sm font-[900] text-stone-200 tracking-tight uppercase hidden sm:block">
+              Sayloop <span className="text-amber-500">Live</span>
             </span>
+          </div>
+
+          {topic && (
+            <div className="flex items-center gap-2 bg-stone-800 border border-stone-700/50 text-stone-300 text-[11px] font-[800] rounded-2xl px-3.5 py-1.5 uppercase tracking-wider shadow-inner">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+              {topic}
+            </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 bg-stone-800 rounded-full px-4 py-1.5">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          <span className="font-mono text-sm font-semibold text-stone-200">
+        <div className="flex items-center gap-2.5 bg-stone-800 rounded-2xl px-4.5 py-2 border border-stone-700/50 shadow-inner">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+          <span className="font-mono text-sm font-[900] text-stone-100 tracking-tighter">
             {fmtTime(elapsed)}
           </span>
         </div>
 
-        <div className="w-20" />
+        <div className="w-10 sm:w-20" />
       </header>
 
       {/* Main content: video area + side panel */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden bg-stone-950">
 
         {/* Left: video + control bar */}
         <div className="flex-1 flex flex-col overflow-hidden">

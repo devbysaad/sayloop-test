@@ -1,129 +1,63 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 export interface ProfileStats {
-  points:           number;
-  streakLength:     number;
-  rank:             number;
-  league:           string;
-  lessonsCompleted: number;
-  totalExercises:   number;
-  correctAnswers:   number;
-  accuracy:         number;
-}
-
-export interface PublicProfile {
-  id:               number;
-  username:         string;
-  firstName:        string | null;
-  lastName:         string | null;
-  pfpSource:        string | null;
-  points:           number;
-  streakLength:     number;
-  createdAt:        string;
-  league:           string;
-  lessonsCompleted: number;
-  following:        number;
-  followers:        number;
-}
-
-export interface SearchResult {
-  id:           number;
-  username:     string;
-  firstName:    string | null;
-  lastName:     string | null;
-  pfpSource:    string | null;
-  points:       number;
+  userId: number;
+  points: number;
   streakLength: number;
+  rank: number;
+  accuracy: number;
+  lessonsCompleted: number;
+  totalExercises: number;
+  correctAnswers: number;
+  debatesWon: number;
+  debatesTotal: number;
 }
 
 interface ProfileState {
-  publicProfile:  PublicProfile | null;
-  profileStats:   ProfileStats | null;
-  searchResults:  SearchResult[];
+  profileStats: ProfileStats | null;
   profileLoading: boolean;
-  profileError:   string | null;
+  profileError: string | null;
 }
 
 const initialState: ProfileState = {
-  publicProfile:  null,
-  profileStats:   null,
-  searchResults:  [],
+  profileStats: null,
   profileLoading: false,
-  profileError:   null,
+  profileError: null,
 };
 
-// ── Slice ─────────────────────────────────────────────────────────────────────
-
+// ─── Slice ────────────────────────────────────────────────────────────────────
 const profileSlice = createSlice({
   name: 'profile',
   initialState,
   reducers: {
-    // Request (triggers saga)
-    fetchPublicProfileRequest: (state, _action: PayloadAction<{ userId: number }>) => {
+    // ── Fetch profile stats ─────────────────────────────────────────────────
+    fetchProfileStatsRequest(state, _action: PayloadAction<{ userId: number }>) {
       state.profileLoading = true;
-      state.profileError   = null;
+      state.profileError = null;
     },
-    fetchProfileStatsRequest: (state, _action: PayloadAction<{ userId: number }>) => {
-      state.profileLoading = true;
-      state.profileError   = null;
+    fetchProfileStatsSuccess(state, action: PayloadAction<ProfileStats>) {
+      state.profileLoading = false;
+      state.profileStats = action.payload;
     },
-    searchProfilesRequest: (state, _action: PayloadAction<{ query: string }>) => {
-      state.profileLoading = true;
-      state.profileError   = null;
+    fetchProfileStatsFailure(state, action: PayloadAction<string>) {
+      state.profileLoading = false;
+      state.profileError = action.payload;
     },
 
-    // Success
-    fetchPublicProfileSuccess: (state, action: PayloadAction<PublicProfile>) => {
-      state.publicProfile  = action.payload;
-      state.profileLoading = false;
-    },
-    fetchProfileStatsSuccess: (state, action: PayloadAction<ProfileStats>) => {
-      state.profileStats   = action.payload;
-      state.profileLoading = false;
-    },
-    searchProfilesSuccess: (state, action: PayloadAction<SearchResult[]>) => {
-      state.searchResults  = action.payload;
-      state.profileLoading = false;
-    },
-
-    // Failure
-    fetchPublicProfileFailure: (state, action: PayloadAction<string>) => {
-      state.profileLoading = false;
-      state.profileError   = action.payload;
-    },
-    fetchProfileStatsFailure: (state, action: PayloadAction<string>) => {
-      state.profileLoading = false;
-      state.profileError   = action.payload;
-    },
-    searchProfilesFailure: (state, action: PayloadAction<string>) => {
-      state.profileLoading = false;
-      state.profileError   = action.payload;
-    },
-
-    // Reset
-    clearProfile: (state) => {
-      state.publicProfile  = null;
-      state.profileStats   = null;
-      state.searchResults  = [];
-      state.profileError   = null;
+    // ── Reset ───────────────────────────────────────────────────────────────
+    resetProfile() {
+      return initialState;
     },
   },
 });
 
 export const {
-  fetchPublicProfileRequest,
   fetchProfileStatsRequest,
-  searchProfilesRequest,
-  fetchPublicProfileSuccess,
   fetchProfileStatsSuccess,
-  searchProfilesSuccess,
-  fetchPublicProfileFailure,
   fetchProfileStatsFailure,
-  searchProfilesFailure,
-  clearProfile,
+  resetProfile,
 } = profileSlice.actions;
 
 export default profileSlice.reducer;

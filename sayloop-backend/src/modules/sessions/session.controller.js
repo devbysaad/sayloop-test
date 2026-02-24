@@ -1,10 +1,10 @@
-const sessionService     = require('./session.service');
+const sessionService = require('./session.service');
 const { success, error } = require('../../utils/response');
 
 // GET /api/sessions/history
 const getSessionHistory = async (req, res) => {
   try {
-    const userId  = req.user.dbId;
+    const userId = req.dbUserId;
     const history = await sessionService.getActiveSession(userId);
     return success(res, history, 'Session history fetched');
   } catch (err) {

@@ -1,46 +1,41 @@
-const profileService     = require('./profile.service');
-const { success, error } = require('../../utils/response');
+const profilesService = require('./profile.service');
 
-// GET /api/profiles/search?q=username
-const searchProfiles = async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q) return error(res, 'Query param "q" is required', 400);
-
-    const users = await profileService.searchProfiles(q);
-    return success(res, users, 'Search results');
-  } catch (err) {
-    console.error('[profile] search error:', err);
-    return error(res, err.message || 'Search failed', 400);
-  }
+// ─── GET /api/profiles/search ─────────────────────────────────────────────────
+const searchPartners = async (req, res) => {
+    try {
+        const { topic, page, limit } = req.query;
+        // BUG FIXED: was trusting client-supplied userId query param.
+        // Use req.dbUserId from auth middleware instead.
+        const data = await profilesService.searchPartners({
+            topic,
+            userId: req.dbUserId,
+            page: Number(page ?? 0),
+            limit: Number(limit ?? 10),
+        });
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        return res.status(err.status ?? 500).json({ success: false, message: err.message ?? 'Failed to search partners' });
+    }
 };
 
-// GET /api/profiles/:userId
-const getPublicProfile = async (req, res) => {
-  try {
-    const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) return error(res, 'Invalid userId', 400);
-
-    const profile = await profileService.getPublicProfile(userId);
-    return success(res, profile, 'Profile fetched');
-  } catch (err) {
-    console.error('[profile] getPublicProfile error:', err);
-    return error(res, err.message || 'User not found', 404);
-  }
-};
-
-// GET /api/profiles/:userId/stats
+// ─── GET /api/profiles/:userId/stats ─────────────────────────────────────────
 const getProfileStats = async (req, res) => {
-  try {
-    const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) return error(res, 'Invalid userId', 400);
-
-    const stats = await profileService.getProfileStats(userId);
-    return success(res, stats, 'Stats fetched');
-  } catch (err) {
-    console.error('[profile] getProfileStats error:', err);
-    return error(res, err.message || 'Failed to get stats', 404);
-  }
+    try {
+        const data = await profilesService.getProfileStats(Number(req.params.userId));
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        return res.status(err.status ?? 500).json({ success: false, message: err.message ?? 'Failed to get profile stats' });
+    }
 };
 
-module.exports = { getPublicProfile, searchProfiles, getProfileStats };
+// ─── GET /api/profiles/:userId ────────────────────────────────────────────────
+const getPublicProfile = async (req, res) => {
+    try {
+        const data = await profilesService.getPublicProfile(Number(req.params.userId));
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        return res.status(err.status ?? 500).json({ success: false, message: err.message ?? 'Failed to get profile' });
+    }
+};
+
+module.exports = { searchPartners, getProfileStats, getPublicProfile };

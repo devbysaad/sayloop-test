@@ -1,19 +1,39 @@
-const express           = require('express');
-const router            = express.Router();
-const profileController = require('./profile.controller');
-const { protect }       = require('../../middleware/auth.middleware');
+const express = require('express');
+const router = express.Router();
 
-// All profile routes require a valid JWT
-router.use(protect);
+const controller = require('./profile.controller');
+const {
+  validate,
+  searchPartnersSchema,
+  getProfileStatsSchema,
+  getPublicProfileSchema,
+  updateBioSchema,
+} = require('./profile.validation');
+const { requireAuth } = require('../../middleware/auth.middleware');
 
-// ORDER MATTERS — specific paths before param paths
-// GET /api/profiles/search?q=username
-router.get('/search', profileController.searchProfiles);
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
-// GET /api/profiles/:userId
-router.get('/:userId', profileController.getPublicProfile);
+// GET  /api/profiles/search          → search potential partners (must be before /:userId)
+router.get(
+  '/search',
+  requireAuth,
+  validate(searchPartnersSchema),
+  controller.searchPartners,
+);
 
-// GET /api/profiles/:userId/stats
-router.get('/:userId/stats', profileController.getProfileStats);
+// GET  /api/profiles/:userId/stats   → profile stats for a specific user
+router.get(
+  '/:userId/stats',
+  requireAuth,
+  validate(getProfileStatsSchema),
+  controller.getProfileStats,
+);
+
+// GET  /api/profiles/:userId         → public profile
+router.get(
+  '/:userId',
+  validate(getPublicProfileSchema),
+  controller.getPublicProfile,
+);
 
 module.exports = router;

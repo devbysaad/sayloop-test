@@ -4,64 +4,55 @@ import { setInSession } from '../../../../redux/slice/session.slice';
 import { sessionActions } from '../../../../redux/saga/session.saga';
 import { getSocket } from '../../../../redux/service/socket.service';
 
-// Add TURN credentials from your .env file.
-// For localhost testing the STUN servers below are enough.
-// Uncomment the TURN block if testing across different networks.
 const buildIceServers = (): RTCConfiguration => ({
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // {
-    //   urls:       import.meta.env.VITE_TURN_URL,
-    //   username:   import.meta.env.VITE_TURN_USERNAME,
-    //   credential: import.meta.env.VITE_TURN_CREDENTIAL,
-    // },
+    // Uncomment for cross-network testing:
+    // { urls: import.meta.env.VITE_TURN_URL, username: import.meta.env.VITE_TURN_USERNAME, credential: import.meta.env.VITE_TURN_CREDENTIAL },
   ],
 });
 
 export interface WebRTCState {
-  muted:          boolean;
-  camOff:         boolean;
-  remoteReady:    boolean;
-  camError:       boolean;
-  localStream:    MediaStream | null;
-  canOfferDraw:   boolean;
-  drawCooldownSec:number;
+  muted: boolean;
+  camOff: boolean;
+  remoteReady: boolean;
+  camError: boolean;
+  localStream: MediaStream | null;
+  canOfferDraw: boolean;
+  drawCooldownSec: number;
 }
 
 export interface WebRTCActions {
   toggleMute: () => void;
-  toggleCam:  () => void;
-  offerDraw:  () => void;
+  toggleCam: () => void;
+  offerDraw: () => void;
 }
 
 export const useWebRTC = (
-  localRef:  React.RefObject<HTMLVideoElement>,
-  remoteRef: React.RefObject<HTMLVideoElement>,
-  userId:    number,
+  localRef: React.RefObject<HTMLVideoElement | null>,
+  remoteRef: React.RefObject<HTMLVideoElement | null>,
+  _userId: number,
 ) => {
   const dispatch = useDispatch();
 
-  // Read Redux state via refs so the useEffect closure always gets fresh values.
-  // Without refs, the effect captures stale values from the first render.
+  // Use a ref so the closure inside useEffect always sees fresh Redux state
   const sessionState = useSelector((s: any) => s.session);
-  const sessionRef   = useRef(sessionState);
-  useEffect(() => {
-    sessionRef.current = sessionState;
-  }, [sessionState]);
+  const sessionRef = useRef(sessionState);
+  useEffect(() => { sessionRef.current = sessionState; }, [sessionState]);
 
-  const socket  = getSocket();
-  const pcRef   = useRef<RTCPeerConnection | null>(null);
+  const socket = getSocket();
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const [muted,       setMuted]       = useState(false);
-  const [camOff,      setCamOff]      = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [camOff, setCamOff] = useState(false);
   const [remoteReady, setRemoteReady] = useState(false);
-  const [camError,    setCamError]    = useState(false);
+  const [camError, setCamError] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
-  // Draw offer: one per minute cooldown
-  const [canOfferDraw,    setCanOfferDraw]    = useState(true);
+  // Draw offer — one per minute cooldown
+  const [canOfferDraw, setCanOfferDraw] = useState(true);
   const [drawCooldownSec, setDrawCooldownSec] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -69,7 +60,7 @@ export const useWebRTC = (
     setCanOfferDraw(false);
     setDrawCooldownSec(60);
     cooldownRef.current = setInterval(() => {
-      setDrawCooldownSec((s) => {
+      setDrawCooldownSec(s => {
         if (s <= 1) {
           clearInterval(cooldownRef.current!);
           setCanOfferDraw(true);
@@ -81,45 +72,38 @@ export const useWebRTC = (
   }, []);
 
   const offerDraw = useCallback(() => {
+    // FIX: was reading sessionRef.current.draw.offered / draw.received
+    // The slice uses drawState: 'none' | 'offered' | 'received' — not a nested object
     const { drawState } = sessionRef.current;
-    if (!canOfferDraw || drawState !== 'none') return;
+    if (!canOfferDraw || drawState === 'offered' || drawState === 'received') return;
     dispatch(sessionActions.offerDraw());
     startDrawCooldown();
   }, [canOfferDraw, dispatch, startDrawCooldown]);
 
-  // Builds the RTCPeerConnection and wires up track and ICE handlers
   const buildPC = useCallback((stream: MediaStream): RTCPeerConnection => {
     const pc = new RTCPeerConnection(buildIceServers());
     pcRef.current = pc;
 
-    // Add local camera and mic tracks to the connection
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-    // When we receive the remote video/audio stream, attach it to the video element
-    pc.ontrack = (event) => {
-      if (remoteRef.current) {
-        remoteRef.current.srcObject = event.streams[0];
-      }
+    pc.ontrack = event => {
+      if (remoteRef.current) remoteRef.current.srcObject = event.streams[0];
       setRemoteReady(true);
       dispatch(setInSession());
     };
 
-    // Send our network candidates to the partner through the server
-    pc.onicecandidate = (event) => {
+    pc.onicecandidate = event => {
       if (!event.candidate) return;
       const partner = sessionRef.current.partner;
       if (partner?.socketId) {
-        socket.emit('ice-candidate', {
-          candidate: event.candidate,
-          to:        partner.socketId,
-        });
+        socket?.emit('ice-candidate', { candidate: event.candidate, to: partner.socketId });
       }
     };
 
     pc.onconnectionstatechange = () => {
       console.log('[WebRTC] connection state:', pc.connectionState);
       if (pc.connectionState === 'failed') {
-        console.warn('[WebRTC] connection failed, restarting ICE');
+        console.warn('[WebRTC] connection failed — restarting ICE');
         pc.restartIce();
       }
     };
@@ -131,11 +115,14 @@ export const useWebRTC = (
     return pc;
   }, [dispatch, remoteRef, socket]);
 
-  // Main setup: runs once when the component mounts
   useEffect(() => {
+    if (!socket) {
+      console.warn('[WebRTC] socket not available — skipping init');
+      return;
+    }
+
     const init = async () => {
       try {
-        // Ask the browser for camera and microphone access
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -143,27 +130,17 @@ export const useWebRTC = (
 
         streamRef.current = stream;
         setLocalStream(stream);
-
-        // Show our own video in the small PiP box
-        if (localRef.current) {
-          localRef.current.srcObject = stream;
-        }
+        if (localRef.current) localRef.current.srcObject = stream;
 
         const pc = buildPC(stream);
 
-        // The initiator (the user who joined second, matched first) sends the offer.
-        // We read from the ref to get the current Redux value, not the stale closure.
         const { isInitiator, partner } = sessionRef.current;
-
         if (isInitiator) {
           if (!partner?.socketId) {
-            console.error('[WebRTC] isInitiator is true but partner.socketId is missing');
+            console.error('[WebRTC] isInitiator=true but partner.socketId missing');
             return;
           }
-          const offer = await pc.createOffer({
-            offerToReceiveVideo: true,
-            offerToReceiveAudio: true,
-          });
+          const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
           await pc.setLocalDescription(offer);
           socket.emit('offer', { offer, to: partner.socketId });
           console.log('[WebRTC] Offer sent to', partner.socketId);
@@ -173,9 +150,6 @@ export const useWebRTC = (
         setCamError(true);
       }
     };
-
-    // Socket signal handlers: these are registered here so only this hook
-    // processes them. The saga deliberately does NOT handle offer/answer/ice-candidate.
 
     const onOffer = async ({ offer, from }: { offer: RTCSessionDescriptionInit; from: string }) => {
       console.log('[WebRTC] Received offer from', from);
@@ -203,36 +177,33 @@ export const useWebRTC = (
 
     const onIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
       try {
-        if (candidate && pcRef.current) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        }
+        if (candidate && pcRef.current) await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
         console.error('[WebRTC] Error adding ICE candidate:', err);
       }
     };
 
-    socket.on('offer',         onOffer);
-    socket.on('answer',        onAnswer);
+    socket.on('offer', onOffer);
+    socket.on('answer', onAnswer);
     socket.on('ice-candidate', onIceCandidate);
 
     init();
 
-    // Cleanup: stop camera, close peer connection, remove socket listeners
     return () => {
-      socket.off('offer',         onOffer);
-      socket.off('answer',        onAnswer);
+      socket.off('offer', onOffer);
+      socket.off('answer', onAnswer);
       socket.off('ice-candidate', onIceCandidate);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach(t => t.stop());
       pcRef.current?.close();
       if (cooldownRef.current) clearInterval(cooldownRef.current);
     };
-  }, []); // intentionally empty — we use refs for fresh values
+  }, []); // intentionally empty — refs provide fresh values
 
   const toggleMute = useCallback(() => {
     const tracks = streamRef.current?.getAudioTracks() ?? [];
     if (!tracks.length) return;
     const next = !tracks[0].enabled;
-    tracks.forEach((t) => { t.enabled = next; });
+    tracks.forEach(t => { t.enabled = next; });
     setMuted(!next);
   }, []);
 
@@ -240,16 +211,12 @@ export const useWebRTC = (
     const tracks = streamRef.current?.getVideoTracks() ?? [];
     if (!tracks.length) return;
     const next = !tracks[0].enabled;
-    tracks.forEach((t) => { t.enabled = next; });
+    tracks.forEach(t => { t.enabled = next; });
     setCamOff(!next);
   }, []);
 
-  const state: WebRTCState = {
-    muted, camOff, remoteReady, camError, localStream,
-    canOfferDraw, drawCooldownSec,
+  return {
+    state: { muted, camOff, remoteReady, camError, localStream, canOfferDraw, drawCooldownSec } as WebRTCState,
+    actions: { toggleMute, toggleCam, offerDraw } as WebRTCActions,
   };
-
-  const actions: WebRTCActions = { toggleMute, toggleCam, offerDraw };
-
-  return { state, actions };
 };

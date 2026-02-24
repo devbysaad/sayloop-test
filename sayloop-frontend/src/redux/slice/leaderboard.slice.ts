@@ -1,84 +1,85 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 export interface LeaderboardEntry {
-  rank:         number;
-  id:           number;
-  username:     string;
-  firstName:    string | null;
-  lastName:     string | null;
-  pfpSource:    string | null;
-  points:       number;
+  id: number;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pfpSource: string | null;
+  points: number;
   streakLength: number;
-}
-
-export interface LeaderboardData {
-  total:      number;
-  page:       number;
-  limit:      number;
-  totalPages: number;
-  data:       LeaderboardEntry[];
+  rank: number;
 }
 
 export interface UserRank {
-  rank:         number;
-  id:           number;
-  username:     string;
-  points:       number;
+  // BUG FIXED: had a stray `z` on a blank line here — caused TypeScript compile error
+  userId: number;
+  rank: number;
+  points: number;
   streakLength: number;
-  pfpSource:    string | null;
+}
+
+interface PaginatedLeaderboard {
+  data: LeaderboardEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 interface LeaderboardState {
-  leaderboard:        LeaderboardData | null;
-  topLeaderboard:     LeaderboardEntry[];
-  userRank:           UserRank | null;
+  leaderboard: PaginatedLeaderboard | null;
+  userRank: UserRank | null;
   leaderboardLoading: boolean;
-  leaderboardError:   string | null;
+  leaderboardError: string | null;
+  rankLoading: boolean;
+  rankError: string | null;
 }
 
 const initialState: LeaderboardState = {
-  leaderboard:        null,
-  topLeaderboard:     [],
-  userRank:           null,
+  leaderboard: null,
+  userRank: null,
   leaderboardLoading: false,
-  leaderboardError:   null,
+  leaderboardError: null,
+  rankLoading: false,
+  rankError: null,
 };
 
-// ── Slice ─────────────────────────────────────────────────────────────────────
-
+// ─── Slice ────────────────────────────────────────────────────────────────────
 const leaderboardSlice = createSlice({
   name: 'leaderboard',
   initialState,
   reducers: {
-    fetchLeaderboardRequest: (state, _action: PayloadAction<{ page: number; limit: number }>) => {
+    fetchLeaderboardRequest(state, _action: PayloadAction<{ page: number; limit: number }>) {
       state.leaderboardLoading = true;
-      state.leaderboardError   = null;
+      state.leaderboardError = null;
     },
-    fetchLeaderboardSuccess: (state, action: PayloadAction<LeaderboardData>) => {
-      state.leaderboard        = action.payload;
+    fetchLeaderboardSuccess(state, action: PayloadAction<PaginatedLeaderboard>) {
       state.leaderboardLoading = false;
+      state.leaderboard = action.payload;
     },
-    fetchTopLeaderboardSuccess: (state, action: PayloadAction<LeaderboardEntry[]>) => {
-      state.topLeaderboard = action.payload;
+    fetchLeaderboardFailure(state, action: PayloadAction<string>) {
+      state.leaderboardLoading = false;
+      state.leaderboardError = action.payload;
     },
-    fetchUserRankRequest: (state, _action: PayloadAction<{ userId: number }>) => {
-      // silent — no loading spinner for rank
+
+    fetchUserRankRequest(state, _action: PayloadAction<{ userId: number }>) {
+      state.rankLoading = true;
+      state.rankError = null;
     },
-    fetchUserRankSuccess: (state, action: PayloadAction<UserRank>) => {
+    fetchUserRankSuccess(state, action: PayloadAction<UserRank>) {
+      state.rankLoading = false;
       state.userRank = action.payload;
     },
-    fetchLeaderboardFailure: (state, action: PayloadAction<string>) => {
-      state.leaderboardLoading = false;
-      state.leaderboardError   = action.payload;
+    fetchUserRankFailure(state, action: PayloadAction<string>) {
+      state.rankLoading = false;
+      state.rankError = action.payload;
     },
-    clearLeaderboard: (state) => {
-      state.leaderboard        = null;
-      state.topLeaderboard     = [];
-      state.userRank           = null;
-      state.leaderboardError   = null;
+
+    resetLeaderboard() {
+      return initialState;
     },
   },
 });
@@ -86,11 +87,11 @@ const leaderboardSlice = createSlice({
 export const {
   fetchLeaderboardRequest,
   fetchLeaderboardSuccess,
-  fetchTopLeaderboardSuccess,
+  fetchLeaderboardFailure,
   fetchUserRankRequest,
   fetchUserRankSuccess,
-  fetchLeaderboardFailure,
-  clearLeaderboard,
+  fetchUserRankFailure,
+  resetLeaderboard,
 } = leaderboardSlice.actions;
 
 export default leaderboardSlice.reducer;

@@ -1,190 +1,71 @@
-import { eventChannel } from 'redux-saga';
-import { take, put, call, fork, cancel, cancelled, select } from 'redux-saga/effects';
-import { getSocket, connectSocket, disconnectSocket } from '../service/socket.service';
 import {
-  setConnected, setDisconnected,
-  setSearching, setWaitingMessage, setPartnerFound, setInSession,
-  addMessage, addArgument,
-  setDrawOffered, setDrawReceived, setDrawDeclined, setDrawAccepted,
-  setDebateEnded, setPartnerDisconnected, setPartnerSkipped,
-  resetSession, setError,
+  call, put, take, fork, cancel, cancelled,
+  takeLatest, takeEvery, race,
+} from 'redux-saga/effects';
+import { createAction } from '@reduxjs/toolkit';
+import { eventChannel, END } from 'redux-saga';
+import { connectSocket, disconnectSocket, getSocket } from '../service/socket.service';
+import type { Socket } from 'socket.io-client';
+import {
+  setSearching, setMatched, setInSession,
+  receiveMessage, receiveArgument,
+  setDrawOffered, setDrawReceived, setDrawNone,
+  setResult, setSessionError, setWaitingMessage, resetSession,
 } from '../slice/session.slice';
 
-// Action type constants
-export const SESSION_ACTIONS = {
-  CONNECT:          'SESSION/CONNECT',
-  DISCONNECT:       'SESSION/DISCONNECT',
-  FIND_PARTNER:     'SESSION/FIND_PARTNER',
-  SEND_MESSAGE:     'SESSION/SEND_MESSAGE',
-  SUBMIT_ARGUMENT:  'SESSION/SUBMIT_ARGUMENT',
-  OFFER_DRAW:       'SESSION/OFFER_DRAW',
-  ACCEPT_DRAW:      'SESSION/ACCEPT_DRAW',
-  DECLINE_DRAW:     'SESSION/DECLINE_DRAW',
-  RESIGN:           'SESSION/RESIGN',
-  END_DEBATE:       'SESSION/END_DEBATE',
-  RESET:            'SESSION/RESET',
-};
-
-// Action creators used by components and hooks
 export const sessionActions = {
-  connect:         (payload) => ({ type: SESSION_ACTIONS.CONNECT,         payload }),
-  disconnect:      ()        => ({ type: SESSION_ACTIONS.DISCONNECT }),
-  findPartner:     (payload) => ({ type: SESSION_ACTIONS.FIND_PARTNER,    payload }),
-  sendMessage:     (payload) => ({ type: SESSION_ACTIONS.SEND_MESSAGE,    payload }),
-  submitArgument:  (payload) => ({ type: SESSION_ACTIONS.SUBMIT_ARGUMENT, payload }),
-  offerDraw:       ()        => ({ type: SESSION_ACTIONS.OFFER_DRAW }),
-  acceptDraw:      ()        => ({ type: SESSION_ACTIONS.ACCEPT_DRAW }),
-  declineDraw:     ()        => ({ type: SESSION_ACTIONS.DECLINE_DRAW }),
-  resign:          ()        => ({ type: SESSION_ACTIONS.RESIGN }),
-  endDebate:       ()        => ({ type: SESSION_ACTIONS.END_DEBATE }),
-  reset:           ()        => ({ type: SESSION_ACTIONS.RESET }),
+  findPartner: createAction<{ userId: number; topic: string }>('session/findPartner'),
+  sendMessage: createAction<{ message: string }>('session/sendMessage'),
+  submitArgument: createAction<{ argument: string }>('session/submitArgument'),
+  offerDraw: createAction('session/offerDraw'),
+  acceptDraw: createAction('session/acceptDraw'),
+  declineDraw: createAction('session/declineDraw'),
+  resign: createAction('session/resign'),
+  leaveSession: createAction('session/leave'),
+  reset: createAction('session/reset'),
 };
 
-// Creates a channel that listens to socket events and passes them into the saga.
-// IMPORTANT: WebRTC signal events (offer, answer, ice-candidate) are NOT handled
-// here. The useWebRTC hook registers its own socket.on listeners for those directly.
-// If the saga also listened to them, it would consume them before the hook could.
-const createSocketChannel = (socket) =>
-  eventChannel((emit) => {
-    socket.on('connect',    () => emit({ type: 'CONNECTED', socketId: socket.id }));
-    socket.on('disconnect', () => emit({ type: 'DISCONNECTED' }));
+function createSocketChannel(socket: Socket) {
+  return eventChannel((emit) => {
+    socket.on('connect', () => emit({ type: 'connected' }));
+    socket.on('connect_error', (e: Error) => emit({ type: 'connect_error', message: e.message }));
+    socket.on('waiting', (d: any) => emit({ type: 'waiting', ...d }));
+    socket.on('matched', (d: any) => emit({ type: 'matched', ...d }));
+    socket.on('chat-message', (d: any) => emit({ type: 'chat-message', ...d }));
+    socket.on('debate-argument', (d: any) => emit({ type: 'debate-argument', ...d }));
+    socket.on('draw-received', () => emit({ type: 'draw-received' }));
+    socket.on('draw-declined', () => emit({ type: 'draw-declined' }));
+    socket.on('draw-accepted', () => emit({ type: 'draw-accepted' }));
+    socket.on('opponent-resigned', () => emit({ type: 'opponent-resigned' }));
+    socket.on('session-error', (d: any) => emit({ type: 'session-error', ...d }));
+    socket.on('partner-disconnected', () => { emit({ type: 'partner-disconnected' }); emit(END); });
 
-    // Matchmaking
-    socket.on('waiting',         (d) => emit({ type: 'WAITING',          ...d }));
-    socket.on('partner-found',   (d) => emit({ type: 'PARTNER_FOUND',    ...d }));
-    socket.on('finding-partner', () => emit({ type: 'FINDING_PARTNER' }));
-
-    // Chat and debate
-    socket.on('receive-message',  (d) => emit({ type: 'MESSAGE_RECEIVED',  ...d }));
-    socket.on('argument-received',(d) => emit({ type: 'ARGUMENT_RECEIVED', ...d }));
-
-    // Draw system
-    socket.on('draw-offered',           (d) => emit({ type: 'DRAW_OFFERED',           ...d }));
-    socket.on('draw-offer-sent',        (d) => emit({ type: 'DRAW_OFFER_SENT',        ...d }));
-    socket.on('draw-declined',          (d) => emit({ type: 'DRAW_DECLINED',          ...d }));
-    socket.on('draw-declined-confirmed',(d) => emit({ type: 'DRAW_DECLINED_CONFIRMED',...d }));
-    socket.on('draw-already-offered',   (d) => emit({ type: 'DRAW_ALREADY_OFFERED',   ...d }));
-
-    // Session end events
-    socket.on('debate-ended',         (d) => emit({ type: 'DEBATE_ENDED',          ...d }));
-    socket.on('partner-disconnected', (d) => emit({ type: 'PARTNER_DISCONNECTED',  ...d }));
-    socket.on('partner-skipped',      () => emit({ type: 'PARTNER_SKIPPED' }));
-
-    // Cleanup all listeners when channel closes
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('waiting');
-      socket.off('partner-found');
-      socket.off('finding-partner');
-      socket.off('receive-message');
-      socket.off('argument-received');
-      socket.off('draw-offered');
-      socket.off('draw-offer-sent');
-      socket.off('draw-declined');
-      socket.off('draw-declined-confirmed');
-      socket.off('draw-already-offered');
-      socket.off('debate-ended');
-      socket.off('partner-disconnected');
-      socket.off('partner-skipped');
+      ['connect', 'connect_error', 'waiting', 'matched', 'chat-message',
+        'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
+        'opponent-resigned', 'partner-disconnected', 'session-error'
+      ].forEach(ev => socket.off(ev));
     };
   });
+}
 
-// Reads socket events and dispatches the matching Redux action
-function* watchSocketEvents(socket) {
-  const channel = yield call(createSocketChannel, socket);
+function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Generator {
   try {
     while (true) {
-      const event = yield take(channel);
+      const event: any = yield take(channel);
       switch (event.type) {
-
-        case 'CONNECTED':
-          yield put(setConnected({ socketId: event.socketId }));
-          break;
-
-        case 'DISCONNECTED':
-          yield put(setDisconnected());
-          break;
-
-        case 'WAITING':
-          yield put(setWaitingMessage({ message: event.message }));
-          break;
-
-        case 'PARTNER_FOUND':
-          yield put(setPartnerFound({
-            partnerId:      event.partnerId,
-            partnerUserId:  event.partnerUserId,
-            roomId:         event.roomId,
-            isInitiator:    event.isInitiator,
-            topic:          event.topic,
-          }));
-          break;
-
-        case 'FINDING_PARTNER':
-          yield put(setSearching({ message: 'Finding new partner...' }));
-          break;
-
-        case 'MESSAGE_RECEIVED': {
-          const mySocketId = yield select((s) => s.session.socketId);
-          yield put(addMessage({
-            userId:    event.userId,
-            message:   event.message,
-            timestamp: event.timestamp,
-            isMe:      event.from === mySocketId,
-          }));
-          break;
-        }
-
-        case 'ARGUMENT_RECEIVED': {
-          const myUserId = yield select((s) => s.session.partner?.userId);
-          yield put(addArgument({
-            from:      event.from,
-            argument:  event.argument,
-            timestamp: event.timestamp,
-            isMe:      event.from !== myUserId,
-          }));
-          break;
-        }
-
-        // Draw flow: partner offered me a draw
-        case 'DRAW_OFFERED':
-          yield put(setDrawReceived());
-          break;
-
-        // Draw flow: server confirmed my offer was sent
-        case 'DRAW_OFFER_SENT':
-          yield put(setDrawOffered());
-          break;
-
-        // Draw flow: my offer was declined
-        case 'DRAW_DECLINED':
-          yield put(setDrawDeclined());
-          break;
-
-        // Draw flow: I declined, server confirmed
-        case 'DRAW_DECLINED_CONFIRMED':
-          yield put(setDrawDeclined());
-          break;
-
-        // Draw flow: tried to offer but one is already pending
-        case 'DRAW_ALREADY_OFFERED':
-          yield put(setDrawDeclined());
-          break;
-
-        case 'DEBATE_ENDED':
-          yield put(setDebateEnded(event));
-          break;
-
-        case 'PARTNER_DISCONNECTED':
-          yield put(setPartnerDisconnected(event));
-          break;
-
-        case 'PARTNER_SKIPPED':
-          yield put(setPartnerSkipped());
-          break;
-
-        default:
-          break;
+        case 'connected': break;
+        case 'connect_error': yield put(setSessionError('Connection failed: ' + event.message)); break;
+        case 'waiting': yield put(setWaitingMessage(event.message)); break;
+        case 'matched': yield put(setMatched({ sessionId: event.sessionId, partner: event.partner, isInitiator: event.isInitiator })); break;
+        case 'chat-message': yield put(receiveMessage({ userId: event.userId, message: event.message, isMe: false, timestamp: event.timestamp })); break;
+        case 'debate-argument': yield put(receiveArgument({ userId: event.userId, argument: event.argument, isMe: false, timestamp: event.timestamp })); break;
+        case 'draw-received': yield put(setDrawReceived()); break;
+        case 'draw-declined': yield put(setDrawNone()); break;
+        case 'draw-accepted': yield put(setDrawNone()); yield put(setResult({ outcome: 'draw', winnerId: null, xpEarned: 15 })); break;
+        case 'opponent-resigned': yield put(setResult({ outcome: 'resign', winnerId: null, xpEarned: 30 })); break;
+        case 'partner-disconnected': yield put(setResult({ outcome: 'opponent_disconnected', winnerId: null, xpEarned: 10 })); break;
+        case 'session-error': yield put(setSessionError(event.message)); break;
       }
     }
   } finally {
@@ -192,128 +73,97 @@ function* watchSocketEvents(socket) {
   }
 }
 
-// Outgoing socket emissions — these send events from the client to the server
-
-function* handleFindPartner(socket, action) {
+function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Generator {
   const { userId, topic } = action.payload;
-  yield put(setSearching({ message: 'Looking for a partner...' }));
-  socket.emit('find-partner', { userId, topic });
-}
 
-function* handleSendMessage(socket, action) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('send-message', { message: action.payload.message, roomId });
-  yield put(addMessage({
-    userId:    action.payload.userId,
-    message:   action.payload.message,
-    timestamp: new Date().toISOString(),
-    isMe:      true,
-  }));
-}
-
-function* handleSubmitArgument(socket, action) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('submit-argument', { argument: action.payload.argument, roomId });
-  yield put(addArgument({
-    from:      action.payload.userId,
-    argument:  action.payload.argument,
-    timestamp: new Date().toISOString(),
-    isMe:      true,
-  }));
-}
-
-function* handleOfferDraw(socket) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('offer-draw', { roomId });
-}
-
-function* handleAcceptDraw(socket) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  yield put(setDrawAccepted());
-  socket.emit('accept-draw', { roomId });
-}
-
-function* handleDeclineDraw(socket) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('decline-draw', { roomId });
-  yield put(setDrawDeclined());
-}
-
-function* handleResign(socket) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('resign', { roomId });
-}
-
-function* handleEndDebate(socket) {
-  const roomId = yield select((s) => s.session.roomId);
-  if (!roomId) return;
-  socket.emit('end-debate', { roomId });
-}
-
-// Main saga: runs while a session is active, routes outgoing actions to handlers
-function* sessionSaga(action) {
-  const { userId } = action.payload;
-  const socket = getSocket();
-  connectSocket();
-
-  // Authenticate with the server as soon as the socket connects
-  socket.once('connect', () => {
-    socket.emit('authenticate', { userId });
-  });
-
-  const socketTask = yield fork(watchSocketEvents, socket);
+  let token: string | null = null;
+  let clerkId: string | null = null;
 
   try {
-    while (true) {
-      const outAction = yield take([
-        SESSION_ACTIONS.FIND_PARTNER,
-        SESSION_ACTIONS.SEND_MESSAGE,
-        SESSION_ACTIONS.SUBMIT_ARGUMENT,
-        SESSION_ACTIONS.OFFER_DRAW,
-        SESSION_ACTIONS.ACCEPT_DRAW,
-        SESSION_ACTIONS.DECLINE_DRAW,
-        SESSION_ACTIONS.RESIGN,
-        SESSION_ACTIONS.END_DEBATE,
-        SESSION_ACTIONS.DISCONNECT,
-        SESSION_ACTIONS.RESET,
-      ]);
+    const clerk = (window as any).Clerk;
+    if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
+    if (clerk?.user?.id) clerkId = clerk.user.id as string;
+  } catch { /* Clerk not ready */ }
 
-      if (
-        outAction.type === SESSION_ACTIONS.DISCONNECT ||
-        outAction.type === SESSION_ACTIONS.RESET
-      ) break;
-
-      switch (outAction.type) {
-        case SESSION_ACTIONS.FIND_PARTNER:    yield call(handleFindPartner,   socket, outAction); break;
-        case SESSION_ACTIONS.SEND_MESSAGE:    yield call(handleSendMessage,   socket, outAction); break;
-        case SESSION_ACTIONS.SUBMIT_ARGUMENT: yield call(handleSubmitArgument,socket, outAction); break;
-        case SESSION_ACTIONS.OFFER_DRAW:      yield call(handleOfferDraw,     socket);            break;
-        case SESSION_ACTIONS.ACCEPT_DRAW:     yield call(handleAcceptDraw,    socket);            break;
-        case SESSION_ACTIONS.DECLINE_DRAW:    yield call(handleDeclineDraw,   socket);            break;
-        case SESSION_ACTIONS.RESIGN:          yield call(handleResign,        socket);            break;
-        case SESSION_ACTIONS.END_DEBATE:      yield call(handleEndDebate,     socket);            break;
-        default: break;
-      }
-    }
-  } finally {
-    yield cancel(socketTask);
-    disconnectSocket();
-    if (yield cancelled()) disconnectSocket();
-    yield put(setDisconnected());
-    yield put(resetSession());
+  if (!clerkId) {
+    yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
+    return;
   }
+
+  const socket = (yield call(connectSocket, userId, token, clerkId)) as Socket;
+  yield put(setSearching({ topic }));
+
+  if (!socket.connected) {
+    yield new Promise<void>((resolve, reject) => {
+      socket.once('connect', () => resolve());
+      socket.once('connect_error', (e: Error) => reject(e));
+    });
+  }
+
+  socket.emit('find-partner', { userId, topic });
+
+  const channel = createSocketChannel(socket);
+  const watchTask: any = yield fork(watchSocketEvents, channel);
+
+  yield race({
+    leave: take(sessionActions.leaveSession.type),
+    reset: take(sessionActions.reset.type),
+  });
+
+  yield cancel(watchTask);
+  channel.close();
+  socket.emit('leave-session');
+  disconnectSocket();
+  yield put(resetSession());
 }
 
-// Root saga: waits for CONNECT action, then starts a session
-export default function* rootSaga() {
-  while (true) {
-    const action = yield take(SESSION_ACTIONS.CONNECT);
-    yield call(sessionSaga, action);
-  }
+function* handleSendMessage(action: ReturnType<typeof sessionActions.sendMessage>): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('chat-message', { message: action.payload.message });
+  yield put(receiveMessage({ userId: 0, message: action.payload.message, isMe: true, timestamp: new Date().toISOString() }));
+}
+
+function* handleSubmitArgument(action: ReturnType<typeof sessionActions.submitArgument>): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('debate-argument', { argument: action.payload.argument });
+  yield put(receiveArgument({ userId: 0, argument: action.payload.argument, isMe: true, timestamp: new Date().toISOString() }));
+}
+
+function* handleOfferDraw(): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('offer-draw');
+  yield put(setDrawOffered());
+}
+
+function* handleAcceptDraw(): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('accept-draw');
+  yield put(setDrawNone());
+}
+
+function* handleDeclineDraw(): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('decline-draw');
+  yield put(setDrawNone());
+}
+
+function* handleResign(): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) return;
+  socket.emit('resign');
+}
+
+export default function* sessionSaga() {
+  yield takeLatest(sessionActions.findPartner.type, sessionFlow);
+  yield takeEvery(sessionActions.sendMessage.type, handleSendMessage);
+  yield takeEvery(sessionActions.submitArgument.type, handleSubmitArgument);
+  yield takeEvery(sessionActions.offerDraw.type, handleOfferDraw);
+  yield takeEvery(sessionActions.acceptDraw.type, handleAcceptDraw);
+  yield takeEvery(sessionActions.declineDraw.type, handleDeclineDraw);
+  yield takeEvery(sessionActions.resign.type, handleResign);
 }

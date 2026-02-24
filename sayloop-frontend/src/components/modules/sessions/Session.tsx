@@ -1,15 +1,17 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { sessionActions } from '../../../../redux/saga/session.saga';
-import { useWebRTC } from './Userwebrtc';
-import SidePanel from './Sidepanel';
-import { DrawBanner, ResignModal, ControlBar } from './SessionControls';
+import { sessionActions } from '../../../redux/saga/session.saga';
+import { useWebRTC } from './sessionScreen/Userwebrtc';
+import SidePanel from './sessionScreen/Sidepanel';
+import DrawBanner from './sessionScreen/Drawbanner';
+import ResignModal from './sessionScreen/Resignmodal';
+import ControlBar from './sessionScreen/Controlbar';
 
 // ── VIDEO AREA ─────────────────────────────────────────────────
 
 interface VideoAreaProps {
-  localRef: React.RefObject<HTMLVideoElement>;
-  remoteRef: React.RefObject<HTMLVideoElement>;
+  localRef: React.RefObject<HTMLVideoElement | null>;
+  remoteRef: React.RefObject<HTMLVideoElement | null>;
   remoteReady: boolean;
   camOff: boolean;
   camError: boolean;
@@ -83,7 +85,7 @@ const Session = ({ userId }: { userId: number }) => {
   const dispatch = useDispatch();
   const { topic, drawState } = useSelector((s: any) => s.session);
 
-  const localRef  = useRef<HTMLVideoElement>(null);
+  const localRef = useRef<HTMLVideoElement>(null);
   const remoteRef = useRef<HTMLVideoElement>(null);
   const { state: rtc, actions: rtcActions } = useWebRTC(localRef, remoteRef, userId);
 
@@ -92,7 +94,7 @@ const Session = ({ userId }: { userId: number }) => {
     const id = setInterval(() => setElapsed(e => e + 1), 1000);
     return () => clearInterval(id);
   }, []);
-  const fmt = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const [reaction, setReaction] = useState<string | null>(null);
   const handleReaction = (e: string) => { setReaction(e); setTimeout(() => setReaction(null), 2500); };

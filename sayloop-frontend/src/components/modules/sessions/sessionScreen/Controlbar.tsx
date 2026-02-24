@@ -1,99 +1,75 @@
 import React from 'react';
 
+type DrawState = 'none' | 'offered' | 'received';
+
 interface Props {
-    localRef: React.RefObject<HTMLVideoElement>;
-    remoteRef: React.RefObject<HTMLVideoElement>;
-    remoteReady: boolean;
+    muted: boolean;
     camOff: boolean;
-    camError: boolean;
-    topic: string | null;
-    reaction: string | null;
+    canOfferDraw: boolean;
+    drawCooldownSec: number;
+    drawState: DrawState;
+    onToggleMute: () => void;
+    onToggleCam: () => void;
+    onOfferDraw: () => void;
+    onReaction: (emoji: string) => void;
+    onResign: () => void;
 }
 
-const VideoArea = ({ localRef, remoteRef, remoteReady, camOff, camError, topic, reaction }: Props) => {
+const REACTIONS = ['👍', '👏', '😂', '🔥', '❤️', '😮'];
+
+const ControlBar = ({
+    muted, camOff, canOfferDraw, drawCooldownSec, drawState,
+    onToggleMute, onToggleCam, onOfferDraw, onReaction, onResign,
+}: Props) => {
+    const drawDisabled = !canOfferDraw || drawState === 'offered' || drawState === 'received';
+
     return (
-        <div className="flex-1 relative bg-stone-950 overflow-hidden">
+        <div className="shrink-0 bg-stone-900 border-t-2 border-stone-800 px-6 py-4 font-sans">
+            <div className="flex items-center justify-between max-w-3xl mx-auto">
 
-            {/* ── REMOTE VIDEO (full area) ────────────────────────── */}
-            <video
-                ref={remoteRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-            />
+                <div className="flex items-center gap-3">
+                    <button onClick={onToggleMute}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-200 active:scale-90 border-none cursor-pointer shadow-sm
+              ${muted ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-stone-800 text-stone-300 hover:bg-stone-700 hover:text-white'}`}>
+                        {muted ? '🔇' : '🎤'}
+                    </button>
 
-            {/* No remote stream yet — placeholder */}
-            {!remoteReady && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-900">
-                    <div className="relative flex items-center justify-center w-24 h-24 mb-4">
-                        <span className="absolute w-24 h-24 rounded-full border-2 border-stone-600 opacity-40 animate-ping" />
-                        <span className="absolute w-16 h-16 rounded-full border-2 border-stone-600 opacity-60 animate-ping [animation-delay:400ms]" />
-                        <div className="relative z-10 w-14 h-14 rounded-full bg-stone-700 border-2 border-stone-600
-                            flex items-center justify-center text-2xl">
-                            🎭
-                        </div>
-                    </div>
-                    <p className="text-stone-400 text-sm font-medium">Connecting to partner…</p>
-                    <p className="text-stone-600 text-xs mt-1 font-mono">Establishing peer connection</p>
+                    <button onClick={onToggleCam}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-200 active:scale-90 border-none cursor-pointer shadow-sm
+              ${camOff ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-stone-800 text-stone-300 hover:bg-stone-700 hover:text-white'}`}>
+                        {camOff ? '📷' : '📹'}
+                    </button>
                 </div>
-            )}
 
-            {/* Floating emoji reaction */}
-            {reaction && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        text-8xl pointer-events-none z-20 drop-shadow-2xl
-                        animate-bounce">
-                    {reaction}
+                <div className="flex items-center gap-2 bg-stone-950/40 p-1.5 rounded-[22px] border border-stone-800/50">
+                    {REACTIONS.map(e => (
+                        <button key={e} onClick={() => onReaction(e)}
+                            className="w-10 h-10 rounded-[18px] flex items-center justify-center text-lg
+                bg-transparent hover:bg-stone-800 transition-all active:scale-75 border-none cursor-pointer hover:scale-110">
+                            {e}
+                        </button>
+                    ))}
                 </div>
-            )}
 
-            {/* Partner label */}
-            {remoteReady && (
-                <div className="absolute bottom-4 left-4 flex items-center gap-2
-                        bg-black/50 backdrop-blur-sm rounded-xl px-3 py-1.5">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span className="text-white text-xs font-semibold">
-                        Partner {topic ? `· ${topic}` : ''}
-                    </span>
-                </div>
-            )}
+                <div className="flex items-center gap-3">
+                    <button onClick={onOfferDraw} disabled={drawDisabled}
+                        className={`px-5 py-3 rounded-2xl text-[13px] font-[900] uppercase tracking-wider transition-all duration-200 active:scale-95 border-none cursor-pointer
+              ${drawDisabled
+                                ? 'bg-stone-800 text-stone-600 cursor-not-allowed opacity-50'
+                                : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 hover:shadow-lg hover:shadow-amber-500/5'}`}>
+                        {drawCooldownSec > 0 ? `Draw (${drawCooldownSec}s)` : 'Offer Draw'}
+                    </button>
 
-            {/* ── LOCAL VIDEO (PiP) ───────────────────────────────── */}
-            <div className="absolute bottom-20 right-3 w-32 h-24 sm:w-40 sm:h-28
-                      rounded-2xl overflow-hidden border-2 border-stone-600
-                      shadow-[0_4px_20px_rgba(0,0,0,0.4)] z-10 bg-stone-800">
-
-                {camError ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-stone-500">
-                        <span className="text-xl">📷</span>
-                        <span className="text-[9px] font-mono">No camera</span>
-                    </div>
-                ) : (
-                    <>
-                        <video
-                            ref={localRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-200
-                          ${camOff ? 'opacity-0' : 'opacity-100'}`}
-                        />
-                        {camOff && (
-                            <div className="absolute inset-0 bg-stone-800 flex items-center justify-center">
-                                <span className="text-2xl">📷</span>
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {/* "You" label */}
-                <div className="absolute bottom-1.5 left-2 text-[9px] text-white/60 font-mono font-medium">
-                    You
+                    <button onClick={onResign}
+                        className="px-5 py-3 rounded-2xl text-[13px] font-[900] uppercase tracking-wider bg-red-500/10 text-red-500
+              hover:bg-red-500 hover:text-white transition-all duration-200 active:scale-95 border-none cursor-pointer hover:shadow-lg hover:shadow-red-500/20"
+                    >
+                        Resign
+                    </button>
                 </div>
             </div>
-
         </div>
     );
 };
 
-export default VideoArea;
+export default ControlBar;

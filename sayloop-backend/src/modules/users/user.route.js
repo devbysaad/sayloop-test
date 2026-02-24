@@ -1,16 +1,17 @@
-const express          = require('express');
-const router           = express.Router();
-const userController   = require('./user.controller');
-const { protect }      = require('../../middleware/auth.middleware');
-const { validate }     = require('../../middleware/validate.middleware');
+const express = require('express');
+const router = express.Router();
+const userController = require('./user.controller');
+const { clerkAuth, protect } = require('../../middleware/auth.middleware');
+const { validate } = require('../../middleware/validate.middleware');
 const { syncUserSchema, updateProfileSchema } = require('./user.validation');
-const paths            = require('../../config/constants');
+const paths = require('../../config/constants');
 
-router.use(protect);
+// SYNC: clerkAuth only — resolveDbUser cannot run before the user exists in DB
+router.post(paths.SYNC_USER, clerkAuth, validate(syncUserSchema), userController.syncUser);
 
-router.post(paths.SYNC_USER,   validate(syncUserSchema),      userController.syncUser);
-router.get(paths.GET_ME,                                      userController.getMe);
-router.put(paths.UPDATE_ME,    validate(updateProfileSchema), userController.updateMe);
-router.get(paths.GET_MY_STATS,                                userController.getMyStats);
+// All other user routes require full protect (clerkAuth + resolveDbUser)
+router.get(paths.GET_ME, protect, userController.getMe);
+router.put(paths.UPDATE_ME, protect, validate(updateProfileSchema), userController.updateMe);
+router.get(paths.GET_MY_STATS, protect, userController.getMyStats);
 
 module.exports = router;

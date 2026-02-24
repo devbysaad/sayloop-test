@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useUser } from '@clerk/clerk-react';
 import type { RootState } from '../../redux/store';
@@ -14,10 +14,10 @@ import PageShell from '../../components/modules/home/PageShell';
 // ─────────────────────────────────────────────────────────────────────────────
 const getLeague = (points: number) => {
   if (points >= 10000) return { name: 'Diamond', color: '#60a5fa', icon: '💎' };
-  if (points >= 5000)  return { name: 'Gold',    color: '#f59e0b', icon: '🥇' };
-  if (points >= 2000)  return { name: 'Silver',  color: '#9ca3af', icon: '🥈' };
-  if (points >= 500)   return { name: 'Bronze',  color: '#f97316', icon: '🥉' };
-  return                      { name: 'Rookie',  color: '#a3e635', icon: '🌱' };
+  if (points >= 5000) return { name: 'Gold', color: '#f59e0b', icon: '🥇' };
+  if (points >= 2000) return { name: 'Silver', color: '#9ca3af', icon: '🥈' };
+  if (points >= 500) return { name: 'Bronze', color: '#f97316', icon: '🥉' };
+  return { name: 'Rookie', color: '#a3e635', icon: '🌱' };
 };
 
 const AVATAR_COLORS = ['#fbbf24', '#f97316', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -27,31 +27,32 @@ const Avatar = ({ entry, size = 40 }: { entry: LeaderboardEntry; size?: number }
   const color = AVATAR_COLORS[entry.id % AVATAR_COLORS.length];
   return entry.pfpSource
     ? <img src={entry.pfpSource} alt={entry.username}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fef3c7' }} />
-    : <div style={{
-        width: size, height: size, borderRadius: '50%', background: color, border: '2px solid #fef3c7',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 900, fontSize: size * 0.38, color: '#fff', flexShrink: 0
-      }}>{initial}</div>;
+      className="rounded-full object-cover border-2 border-[#fef3c7]"
+      style={{ width: size, height: size }} />
+    : <div className="rounded-full border-2 border-[#fef3c7] flex items-center justify-center font-[900] text-white shrink-0"
+      style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}>
+      {initial}
+    </div>;
 };
 
 const MEDAL = [
-  { bg: '#fef3c7', border: '#fbbf24', emoji: '🥇' },
-  { bg: '#f3f4f6', border: '#9ca3af', emoji: '🥈' },
-  { bg: '#fff7ed', border: '#f97316', emoji: '🥉' },
+  { bg: 'from-[#fef3c7] to-white', border: 'border-[#fbbf24]', emoji: '🥇' },
+  { bg: 'from-[#f3f4f6] to-white', border: 'border-[#9ca3af]', emoji: '🥈' },
+  { bg: 'from-[#fff7ed] to-white', border: 'border-[#f97316]', emoji: '🥉' },
 ];
 
 const PodiumCard = ({ entry, height, crown }: { entry: LeaderboardEntry; height: number; crown?: boolean }) => {
   const m = MEDAL[entry.rank - 1];
   return (
-    <div style={{ flex: 1, maxWidth: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', animation: 'pop .5s ease both' }}>
-      {crown && <span style={{ fontSize: '20px' }}>👑</span>}
+    <div className="flex-1 max-w-[140px] flex flex-col items-center gap-1.5 animate-pop">
+      {crown && <span className="text-[20px]">👑</span>}
       <Avatar entry={entry} size={crown ? 52 : 42} />
-      <p style={{ fontWeight: 900, color: '#1a1a26', fontSize: '11px', margin: 0, textAlign: 'center', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <p className="font-[900] text-[#1a1a26] text-[11px] m-0 text-center max-w-[110px] overflow-hidden text-ellipsis whitespace-nowrap">
         {entry.firstName || entry.username}
       </p>
-      <p style={{ fontWeight: 800, color: '#f59e0b', fontSize: '12px', margin: 0 }}>{entry.points.toLocaleString()} XP</p>
-      <div style={{ width: '100%', height, background: `linear-gradient(180deg,${m.bg},#fff)`, border: `2px solid ${m.border}`, borderRadius: '14px 14px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+      <p className="font-[800] text-[#f59e0b] text-[12px] m-0">{entry.points.toLocaleString()} XP</p>
+      <div className={`w-full bg-linear-to-b ${m.bg} border-2 ${m.border} rounded-t-[14px] flex items-center justify-center text-[22px]`}
+        style={{ height }}>
         {m.emoji}
       </div>
     </div>
@@ -59,7 +60,7 @@ const PodiumCard = ({ entry, height, crown }: { entry: LeaderboardEntry; height:
 };
 
 const SkeletonRow = () => (
-  <div style={{ height: '62px', borderRadius: '16px', background: 'linear-gradient(90deg,#f3f4f6 25%,#fef9f0 50%,#f3f4f6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+  <div className="h-[62px] rounded-[16px] bg-linear-to-r from-[#f3f4f6] via-[#fef9f0] to-[#f3f4f6] bg-[length:200%_100%] animate-shimmer" />
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,56 +94,45 @@ const LeaderboardPage = () => {
 
   return (
     <PageShell>
-      <style>{`
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-        @keyframes pop     { 0%{transform:scale(.85);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
-        .anim-1 { animation: fadeUp .4s ease both; }
-        .anim-2 { animation: fadeUp .4s .07s ease both; }
-        .anim-3 { animation: fadeUp .4s .14s ease both; }
-        .anim-4 { animation: fadeUp .4s .21s ease both; }
-        .lb-row:hover { transform: translateX(4px); }
-      `}</style>
-
       {/* Header */}
-      <div className="anim-1" style={{ marginBottom: '20px' }}>
-        <p style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 700, margin: '0 0 2px' }}>This week</p>
-        <h1 style={{ fontSize: 'clamp(22px,5vw,30px)', fontWeight: 900, color: '#1a1a26', margin: 0 }}>Leaderboard 🏆</h1>
+      <div className="animate-fade-in-up mb-5 font-sans">
+        <p className="text-[#9ca3af] text-[13px] font-bold m-0 mb-0.5">This week</p>
+        <h1 className="text-[clamp(22px,5vw,30px)] font-[900] text-[#1a1a26] m-0">Leaderboard 🏆</h1>
       </div>
 
       {/* Your rank banner */}
       {userRank && (
-        <div className="anim-2" style={{ background: 'linear-gradient(135deg,#1a1a26,#2d2d3d)', borderRadius: '20px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '14px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'radial-gradient(circle,#fde68a,transparent 65%)', opacity: 0.18 }} />
-          <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'linear-gradient(135deg,#fbbf24,#f97316)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px', color: '#fff', flexShrink: 0 }}>
+        <div className="animate-fade-in-up [animation-delay:70ms] bg-linear-to-br from-[#1a1a26] to-[#2d2d3d] rounded-[20px] px-5 py-4 mb-4 flex items-center gap-3.5 relative overflow-hidden font-sans">
+          <div className="absolute -top-7 -right-7 w-30 h-30 rounded-full bg-[radial-gradient(circle,#fde68a,transparent_65%)] opacity-[0.18]" />
+          <div className="w-[46px] h-[46px] rounded-[14px] bg-linear-to-br from-[#fbbf24] to-[#f97316] flex items-center justify-center font-[900] text-[16px] text-white shrink-0">
             #{userRank.rank}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ color: '#fffbf5', fontWeight: 900, fontSize: '14px', margin: '0 0 2px' }}>Your rank</p>
-            <p style={{ color: '#9ca3af', fontWeight: 600, fontSize: '12px', margin: 0 }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-[#fffbf5] font-[900] text-[14px] m-0 mb-0.5">Your rank</p>
+            <p className="text-[#9ca3af] font-[600] text-[12px] m-0">
               {getLeague(userRank.points).icon} {getLeague(userRank.points).name} League · 🔥 {userRank.streakLength}d streak
             </p>
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ color: '#f59e0b', fontWeight: 900, fontSize: '18px', margin: 0 }}>{userRank.points.toLocaleString()}</p>
-            <p style={{ color: '#6b7280', fontWeight: 700, fontSize: '11px', margin: 0 }}>XP</p>
+          <div className="text-right shrink-0">
+            <p className="text-[#f59e0b] font-[900] text-[18px] m-0">{userRank.points.toLocaleString()}</p>
+            <p className="text-[#6b7280] font-bold text-[11px] m-0">XP</p>
           </div>
         </div>
       )}
 
       {/* Loading skeletons */}
       {leaderboardLoading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="flex flex-col gap-2">
           {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
         </div>
       )}
 
       {/* Error */}
       {leaderboardError && !leaderboardLoading && (
-        <div style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '18px', padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: '#dc2626', fontWeight: 800, fontSize: '14px', margin: '0 0 12px' }}>Failed to load leaderboard</p>
+        <div className="bg-red-50 border-2 border-red-200 rounded-[18px] p-6 text-center font-sans">
+          <p className="text-red-600 font-[800] text-[14px] m-0 mb-3">Failed to load leaderboard</p>
           <button onClick={() => dispatch(fetchLeaderboardRequest({ page, limit: LIMIT }))}
-            style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)', color: '#fff', fontWeight: 800, fontSize: '13px', padding: '10px 22px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontFamily: 'Nunito,sans-serif' }}>
+            className="bg-linear-to-br from-[#fbbf24] to-[#f97316] text-white font-[800] text-[13px] px-5 py-2.5 rounded-[12px] border-none cursor-pointer font-sans shadow-md">
             Try again
           </button>
         </div>
@@ -150,8 +140,8 @@ const LeaderboardPage = () => {
 
       {/* Podium — top 3 */}
       {!leaderboardLoading && !leaderboardError && top3.length === 3 && (
-        <div className="anim-3" style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '6px', marginBottom: '16px' }}>
+        <div className="animate-fade-in-up [animation-delay:140ms] mb-4 font-sans">
+          <div className="flex items-end justify-center gap-1.5 mb-4">
             <PodiumCard entry={top3[1]} height={90} />
             <PodiumCard entry={top3[0]} height={120} crown />
             <PodiumCard entry={top3[2]} height={72} />
@@ -161,29 +151,30 @@ const LeaderboardPage = () => {
 
       {/* Ranked rows */}
       {!leaderboardLoading && !leaderboardError && rest.length > 0 && (
-        <div className="anim-4" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+        <div className="animate-fade-in-up [animation-delay:210ms] flex flex-col gap-2 mb-4 font-sans">
           {rest.map((entry) => {
             const league = getLeague(entry.points);
             const isMe = user?.username === entry.username;
-            const medal = entry.rank <= 3 && page === 0 ? MEDAL[entry.rank - 1].emoji : null;
+            const medalEmoji = entry.rank <= 3 && page === 0 ? MEDAL[entry.rank - 1].emoji : null;
             return (
-              <div key={entry.id} className="lb-row" style={{ background: isMe ? '#fef9f0' : '#fff', border: `2px solid ${isMe ? '#fcd34d' : '#fef3c7'}`, borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'transform .15s' }}>
-                <div style={{ width: '32px', textAlign: 'center', flexShrink: 0 }}>
-                  {medal ? <span style={{ fontSize: '18px' }}>{medal}</span> : <span style={{ fontWeight: 900, fontSize: '13px', color: '#9ca3af' }}>#{entry.rank}</span>}
+              <div key={entry.id} className={`group bg-white border-2 rounded-[16px] px-4 py-3 flex items-center gap-3 transition-all duration-150 hover:translate-x-1 shadow-xs ${isMe ? 'bg-amber-50/50 border-amber-300' : 'bg-white border-[#fef3c7]'
+                }`}>
+                <div className="w-8 text-center shrink-0">
+                  {medalEmoji ? <span className="text-[18px]">{medalEmoji}</span> : <span className="font-[900] text-[13px] text-gray-400">#{entry.rank}</span>}
                 </div>
                 <Avatar entry={entry} size={38} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <p style={{ fontWeight: 900, color: '#1a1a26', fontSize: '13px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-[900] text-[#1a1a26] text-[13px] m-0 overflow-hidden text-ellipsis whitespace-nowrap">
                       {entry.firstName ? `${entry.firstName} ${entry.lastName || ''}`.trim() : entry.username}
                     </p>
-                    {isMe && <span style={{ background: 'linear-gradient(135deg,#fbbf24,#f97316)', color: '#fff', fontSize: '9px', fontWeight: 900, padding: '2px 7px', borderRadius: '999px' }}>YOU</span>}
+                    {isMe && <span className="bg-linear-to-br from-[#fbbf24] to-[#f97316] text-white text-[9px] font-[900] px-2 py-0.5 rounded-full uppercase tracking-tighter">You</span>}
                   </div>
-                  <p style={{ color: '#9ca3af', fontWeight: 600, fontSize: '11px', margin: '1px 0 0' }}>{league.icon} {league.name} · 🔥 {entry.streakLength}d</p>
+                  <p className="text-[#9ca3af] font-[600] text-[11px] m-0 mt-0.5">{league.icon} {league.name} · 🔥 {entry.streakLength}d</p>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontWeight: 900, color: '#f59e0b', fontSize: '15px', margin: 0 }}>{entry.points.toLocaleString()}</p>
-                  <p style={{ fontWeight: 600, color: '#9ca3af', fontSize: '10px', margin: 0 }}>XP</p>
+                <div className="text-right shrink-0">
+                  <p className="font-[900] text-[#f59e0b] text-[15px] m-0">{entry.points.toLocaleString()}</p>
+                  <p className="font-[600] text-[#9ca3af] text-[10px] m-0">XP</p>
                 </div>
               </div>
             );
@@ -193,25 +184,27 @@ const LeaderboardPage = () => {
 
       {/* Empty state */}
       {!leaderboardLoading && !leaderboardError && entries.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '56px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏆</div>
-          <p style={{ fontWeight: 900, color: '#1a1a26', fontSize: '16px', margin: '0 0 6px' }}>No one here yet</p>
-          <p style={{ fontWeight: 600, color: '#9ca3af', fontSize: '13px', margin: 0 }}>Complete lessons to earn XP and appear on the leaderboard!</p>
+        <div className="text-center py-14 px-5 font-sans">
+          <div className="text-[48px] mb-3">🏆</div>
+          <p className="font-[900] text-[#1a1a26] text-[16px] m-0 mb-1.5">No one here yet</p>
+          <p className="font-[600] text-[#9ca3af] text-[13px] m-0">Complete lessons to earn XP and appear on the leaderboard!</p>
         </div>
       )}
 
       {/* Pagination */}
       {!leaderboardLoading && totalPages > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <div className="flex items-center justify-center gap-2.5 font-sans">
           <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-            style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '12px', padding: '10px 18px', fontWeight: 800, fontSize: '13px', color: '#1a1a26', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.4 : 1, fontFamily: 'Nunito,sans-serif' }}>
+            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'
+              }`}>
             ← Prev
           </button>
-          <div style={{ background: '#fef3c7', border: '2px solid #fcd34d', borderRadius: '12px', padding: '10px 18px', fontWeight: 900, fontSize: '13px', color: '#d97706' }}>
+          <div className="bg-[#fef3c7] border-2 border-[#fcd34d] rounded-[12px] px-[18px] py-2.5 font-[900] text-[13px] text-[#d97706]">
             {page + 1} / {totalPages}
           </div>
           <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
-            style={{ background: '#fff', border: '2px solid #fef3c7', borderRadius: '12px', padding: '10px 18px', fontWeight: 800, fontSize: '13px', color: '#1a1a26', cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer', opacity: page >= totalPages - 1 ? 0.4 : 1, fontFamily: 'Nunito,sans-serif' }}>
+            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page >= totalPages - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'
+              }`}>
             Next →
           </button>
         </div>

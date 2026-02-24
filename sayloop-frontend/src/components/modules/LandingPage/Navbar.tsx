@@ -17,9 +17,8 @@ const Navbar = () => {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap');`}</style>
       <nav
         style={{ fontFamily: "'Nunito', sans-serif" }}
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'
-        }`}
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'
+          }`}
       >
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -51,10 +50,10 @@ const Navbar = () => {
               </Link>
             </SignedOut>
             <SignedIn>
-              <Link to="/debate">
+              <Link to="/home">
                 <button className="text-sm text-white px-6 py-2.5 rounded-2xl hover:-translate-y-0.5 transition-all"
                   style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 4px 14px rgba(251,191,36,0.45)' }}>
-                  Find a partner
+                  Go Home
                 </button>
               </Link>
               <UserButton afterSignOutUrl="/" />

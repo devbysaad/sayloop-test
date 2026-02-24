@@ -16,10 +16,16 @@ function ClerkProviderWithRoutes({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   return (
-    <ClerkProvider 
+    <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
       routerPush={(to) => navigate(to)}
       routerReplace={(to) => navigate(to, { replace: true })}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/home"
+      afterSignUpUrl="/home"
+      signInFallbackRedirectUrl="/home"
+      signUpFallbackRedirectUrl="/home"
     >
       {children}
     </ClerkProvider>

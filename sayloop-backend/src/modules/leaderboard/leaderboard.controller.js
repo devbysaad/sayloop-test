@@ -1,48 +1,34 @@
+// ─── leaderboard.controller.js ───────────────────────────────────────────────
 const leaderboardService = require('./leaderboard.service');
-const { success, error } = require('../../utils/response');
 
-// GET /api/leaderboard/paginated?page=0&limit=20
-const getPaginatedLeaderBoard = async (req, res) => {
+const getPaginated = async (req, res) => {
   try {
-    const { page = '0', limit = '20' } = req.query;
-    const data = await leaderboardService.getPaginatedLeaderBoard(
-      parseInt(page),
-      parseInt(limit)
-    );
-    return success(res, data, 'Leaderboard fetched successfully');
+    const page  = Number(req.query.page  ?? 0);
+    const limit = Number(req.query.limit ?? 20);
+    const data  = await leaderboardService.getPaginated(page, limit);
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    console.error('[leaderboard] getPaginated error:', err);
-    return error(res, 'Failed to get leaderboard', 500);
+    return res.status(err.status ?? 500).json({ success: false, message: err.message });
   }
 };
 
-// GET /api/leaderboard/top
-const getTopLeaderboard = async (req, res) => {
+const getTop = async (req, res) => {
   try {
-    const data = await leaderboardService.getTopLeaderboard();
-    return success(res, data, 'Top leaderboard fetched successfully');
+    const limit = Number(req.query.limit ?? 10);
+    const data  = await leaderboardService.getTop(limit);
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    console.error('[leaderboard] getTop error:', err);
-    return error(res, 'Failed to get top leaderboard', 500);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// GET /api/leaderboard/rank/:userId
 const getUserRank = async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) return error(res, 'Invalid userId', 400);
-
-    const data = await leaderboardService.getUserRank(userId);
-    return success(res, data, 'User rank fetched successfully');
+    const data = await leaderboardService.getUserRank(Number(req.params.userId));
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    console.error('[leaderboard] getUserRank error:', err);
-    return error(res, err.message || 'Failed to get user rank', 404);
+    return res.status(err.status ?? 500).json({ success: false, message: err.message });
   }
 };
 
-module.exports = {
-  getPaginatedLeaderBoard,
-  getTopLeaderboard,
-  getUserRank,
-};
+module.exports = { getPaginated, getTop, getUserRank };

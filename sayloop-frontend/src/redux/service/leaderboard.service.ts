@@ -1,53 +1,21 @@
-import axios from 'axios';
+/**
+ * BUG FIXED: was using localStorage.getItem('clerk_token') — wrong Clerk token access.
+ * Now uses axiosInstance which injects the correct Bearer token automatically.
+ */
+import axiosInstance from '../../lib/axiosInstance';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Axios instance
-// ─────────────────────────────────────────────────────────────────────────────
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sayloop_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Leaderboard API
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const leaderboardApi = {
-  getPaginated: async (page: number, limit: number) => {
-    const res = await api.get(`/leaderboard/paginated?page=${page}&limit=${limit}`);
-    return res.data.data;
+const leaderboardService = {
+  async fetchLeaderboard(page: number, limit: number) {
+    const { data } = await axiosInstance.get('/api/leaderboard/paginated', {
+      params: { page, limit },
+    });
+    return data; // { success, data: { data[], total, page, limit, totalPages } }
   },
-  getTop: async () => {
-    const res = await api.get('/leaderboard/top');
-    return res.data.data;
-  },
-  getUserRank: async (userId: number) => {
-    const res = await api.get(`/leaderboard/rank/${userId}`);
-    return res.data.data;
+
+  async fetchUserRank(userId: number) {
+    const { data } = await axiosInstance.get(`/api/leaderboard/rank/${userId}`);
+    return data; // { success, data: { userId, rank, points, streakLength } }
   },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Profile API
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const profileApi = {
-  getPublicProfile: async (userId: number) => {
-    const res = await api.get(`/profiles/${userId}`);
-    return res.data.data;
-  },
-  getStats: async (userId: number) => {
-    const res = await api.get(`/profiles/${userId}/stats`);
-    return res.data.data;
-  },
-  search: async (query: string) => {
-    const res = await api.get(`/profiles/search?q=${encodeURIComponent(query)}`);
-    return res.data.data;
-  },
-};
+export default leaderboardService;
