@@ -26,7 +26,7 @@ const Avatar = ({ entry, size = 40 }: { entry: LeaderboardEntry; size?: number }
   const initial = (entry.firstName?.[0] || entry.username?.[0] || '?').toUpperCase();
   const color = AVATAR_COLORS[entry.id % AVATAR_COLORS.length];
   return entry.pfpSource
-    ? <img src={entry.pfpSource} alt={entry.username}
+    ? <img src={entry.pfpSource ?? undefined} alt={entry.username}
       className="rounded-full object-cover border-2 border-[#fef3c7]"
       style={{ width: size, height: size }} />
     : <div className="rounded-full border-2 border-[#fef3c7] flex items-center justify-center font-[900] text-white shrink-0"
