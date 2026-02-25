@@ -9,9 +9,6 @@ import {
 } from '../../redux/slice/leaderboard.slice';
 import PageShell from '../../components/modules/home/PageShell';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 const getLeague = (points: number) => {
   if (points >= 10000) return { name: 'Diamond', color: '#60a5fa', icon: '💎' };
   if (points >= 5000) return { name: 'Gold', color: '#f59e0b', icon: '🥇' };
@@ -26,7 +23,7 @@ const Avatar = ({ entry, size = 40 }: { entry: LeaderboardEntry; size?: number }
   const initial = (entry.firstName?.[0] || entry.username?.[0] || '?').toUpperCase();
   const color = AVATAR_COLORS[entry.id % AVATAR_COLORS.length];
   return entry.pfpSource
-    ? <img src={entry.pfpSource ?? undefined} alt={entry.username}
+    ? <img src={entry.pfpSource ?? undefined} alt={entry.username ?? undefined}
       className="rounded-full object-cover border-2 border-[#fef3c7]"
       style={{ width: size, height: size }} />
     : <div className="rounded-full border-2 border-[#fef3c7] flex items-center justify-center font-[900] text-white shrink-0"
@@ -63,16 +60,12 @@ const SkeletonRow = () => (
   <div className="h-[62px] rounded-[16px] bg-linear-to-r from-[#f3f4f6] via-[#fef9f0] to-[#f3f4f6] bg-[length:200%_100%] animate-shimmer" />
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Page
-// ─────────────────────────────────────────────────────────────────────────────
 const LeaderboardPage = () => {
   const dispatch = useDispatch();
   const { user } = useUser();
   const [page, setPage] = useState(0);
   const LIMIT = 20;
 
-  // ✅ reads from state.leaderboard (set in store)
   const { leaderboard, userRank, leaderboardLoading, leaderboardError } =
     useSelector((s: RootState) => s.leaderboard);
 
@@ -94,13 +87,11 @@ const LeaderboardPage = () => {
 
   return (
     <PageShell>
-      {/* Header */}
       <div className="animate-fade-in-up mb-5 font-sans">
         <p className="text-[#9ca3af] text-[13px] font-bold m-0 mb-0.5">This week</p>
         <h1 className="text-[clamp(22px,5vw,30px)] font-[900] text-[#1a1a26] m-0">Leaderboard 🏆</h1>
       </div>
 
-      {/* Your rank banner */}
       {userRank && (
         <div className="animate-fade-in-up [animation-delay:70ms] bg-linear-to-br from-[#1a1a26] to-[#2d2d3d] rounded-[20px] px-5 py-4 mb-4 flex items-center gap-3.5 relative overflow-hidden font-sans">
           <div className="absolute -top-7 -right-7 w-30 h-30 rounded-full bg-[radial-gradient(circle,#fde68a,transparent_65%)] opacity-[0.18]" />
@@ -120,14 +111,12 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Loading skeletons */}
       {leaderboardLoading && (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
         </div>
       )}
 
-      {/* Error */}
       {leaderboardError && !leaderboardLoading && (
         <div className="bg-red-50 border-2 border-red-200 rounded-[18px] p-6 text-center font-sans">
           <p className="text-red-600 font-[800] text-[14px] m-0 mb-3">Failed to load leaderboard</p>
@@ -138,7 +127,6 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Podium — top 3 */}
       {!leaderboardLoading && !leaderboardError && top3.length === 3 && (
         <div className="animate-fade-in-up [animation-delay:140ms] mb-4 font-sans">
           <div className="flex items-end justify-center gap-1.5 mb-4">
@@ -149,7 +137,6 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Ranked rows */}
       {!leaderboardLoading && !leaderboardError && rest.length > 0 && (
         <div className="animate-fade-in-up [animation-delay:210ms] flex flex-col gap-2 mb-4 font-sans">
           {rest.map((entry) => {
@@ -157,8 +144,7 @@ const LeaderboardPage = () => {
             const isMe = user?.username === entry.username;
             const medalEmoji = entry.rank <= 3 && page === 0 ? MEDAL[entry.rank - 1].emoji : null;
             return (
-              <div key={entry.id} className={`group bg-white border-2 rounded-[16px] px-4 py-3 flex items-center gap-3 transition-all duration-150 hover:translate-x-1 shadow-xs ${isMe ? 'bg-amber-50/50 border-amber-300' : 'bg-white border-[#fef3c7]'
-                }`}>
+              <div key={entry.id} className={`group bg-white border-2 rounded-[16px] px-4 py-3 flex items-center gap-3 transition-all duration-150 hover:translate-x-1 shadow-xs ${isMe ? 'bg-amber-50/50 border-amber-300' : 'bg-white border-[#fef3c7]'}`}>
                 <div className="w-8 text-center shrink-0">
                   {medalEmoji ? <span className="text-[18px]">{medalEmoji}</span> : <span className="font-[900] text-[13px] text-gray-400">#{entry.rank}</span>}
                 </div>
@@ -182,7 +168,6 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Empty state */}
       {!leaderboardLoading && !leaderboardError && entries.length === 0 && (
         <div className="text-center py-14 px-5 font-sans">
           <div className="text-[48px] mb-3">🏆</div>
@@ -191,20 +176,17 @@ const LeaderboardPage = () => {
         </div>
       )}
 
-      {/* Pagination */}
       {!leaderboardLoading && totalPages > 1 && (
         <div className="flex items-center justify-center gap-2.5 font-sans">
           <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'
-              }`}>
+            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}`}>
             ← Prev
           </button>
           <div className="bg-[#fef3c7] border-2 border-[#fcd34d] rounded-[12px] px-[18px] py-2.5 font-[900] text-[13px] text-[#d97706]">
             {page + 1} / {totalPages}
           </div>
           <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
-            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page >= totalPages - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'
-              }`}>
+            className={`bg-white border-2 border-[#fef3c7] rounded-[12px] px-[18px] py-2.5 font-bold text-[13px] text-[#1a1a26] cursor-pointer transition-all active:scale-95 font-sans ${page >= totalPages - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}`}>
             Next →
           </button>
         </div>
