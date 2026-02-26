@@ -53,7 +53,7 @@ const Navbar = () => {
               <Link to="/home">
                 <button className="text-sm text-white px-6 py-2.5 rounded-2xl hover:-translate-y-0.5 transition-all"
                   style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)', boxShadow: '0 4px 14px rgba(251,191,36,0.45)' }}>
-                  Go Home
+                  Go Home - Find a partner
                 </button>
               </Link>
               <UserButton afterSignOutUrl="/" />
