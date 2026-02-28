@@ -8,8 +8,11 @@ const buildIceServers = (): RTCConfiguration => ({
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // Uncomment for cross-network testing:
-    // { urls: import.meta.env.VITE_TURN_URL, username: import.meta.env.VITE_TURN_USERNAME, credential: import.meta.env.VITE_TURN_CREDENTIAL },
+    {
+      urls: import.meta.env.VITE_TURN_URL,
+      username: import.meta.env.VITE_TURN_USERNAME,
+      credential: import.meta.env.VITE_TURN_CREDENTIAL,
+    },
   ],
 });
 
@@ -36,7 +39,6 @@ export const useWebRTC = (
 ) => {
   const dispatch = useDispatch();
 
-  // Use a ref so the closure inside useEffect always sees fresh Redux state
   const sessionState = useSelector((s: any) => s.session);
   const sessionRef = useRef(sessionState);
   useEffect(() => { sessionRef.current = sessionState; }, [sessionState]);
@@ -51,7 +53,6 @@ export const useWebRTC = (
   const [camError, setCamError] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
-  // Draw offer — one per minute cooldown
   const [canOfferDraw, setCanOfferDraw] = useState(true);
   const [drawCooldownSec, setDrawCooldownSec] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,8 +73,6 @@ export const useWebRTC = (
   }, []);
 
   const offerDraw = useCallback(() => {
-    // FIX: was reading sessionRef.current.draw.offered / draw.received
-    // The slice uses drawState: 'none' | 'offered' | 'received' — not a nested object
     const { drawState } = sessionRef.current;
     if (!canOfferDraw || drawState === 'offered' || drawState === 'received') return;
     dispatch(sessionActions.offerDraw());
@@ -153,8 +152,20 @@ export const useWebRTC = (
 
     const onOffer = async ({ offer, from }: { offer: RTCSessionDescriptionInit; from: string }) => {
       console.log('[WebRTC] Received offer from', from);
+
+      // FIX: wait for pcRef to be set in case init() hasn't finished yet
+      let attempts = 0;
+      while (!pcRef.current && attempts < 30) {
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+
       const pc = pcRef.current;
-      if (!pc) return;
+      if (!pc) {
+        console.error('[WebRTC] pcRef still null after waiting — offer dropped');
+        return;
+      }
+
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await pc.createAnswer();
@@ -177,7 +188,9 @@ export const useWebRTC = (
 
     const onIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
       try {
-        if (candidate && pcRef.current) await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        if (candidate && pcRef.current) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        }
       } catch (err) {
         console.error('[WebRTC] Error adding ICE candidate:', err);
       }
@@ -197,7 +210,7 @@ export const useWebRTC = (
       pcRef.current?.close();
       if (cooldownRef.current) clearInterval(cooldownRef.current);
     };
-  }, []); // intentionally empty — refs provide fresh values
+  }, []);
 
   const toggleMute = useCallback(() => {
     const tracks = streamRef.current?.getAudioTracks() ?? [];
