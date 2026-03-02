@@ -6,17 +6,19 @@ import {
   fetchProfileStatsSuccess,
   fetchProfileStatsFailure,
 } from '../slice/profile.slice';
+import type { ProfileStats } from '../slice/profile.slice';
 
-// ─── Workers ──────────────────────────────────────────────────────────────────
-
+// ─── Worker ───────────────────────────────────────────────────────────────────
 function* handleFetchProfileStats(
   action: PayloadAction<{ userId: number }>,
 ): Generator {
   try {
-    const data: any = yield call(
+    // profileService.fetchProfileStats already unwraps response.data.data
+    const data = (yield call(
       profileService.fetchProfileStats,
       action.payload.userId,
-    );
+    )) as ProfileStats;
+
     yield put(fetchProfileStatsSuccess(data));
   } catch (err: any) {
     const message =

@@ -13,6 +13,7 @@ import {
   setResult, setSessionError, setWaitingMessage, resetSession,
 } from '../slice/session.slice';
 
+// ─── Actions ──────────────────────────────────────────────────────────────────
 export const sessionActions = {
   findPartner: createAction<{ userId: number; topic: string }>('session/findPartner'),
   sendMessage: createAction<{ message: string }>('session/sendMessage'),
@@ -25,6 +26,7 @@ export const sessionActions = {
   reset: createAction('session/reset'),
 };
 
+// ─── Socket channel ───────────────────────────────────────────────────────────
 function createSocketChannel(socket: Socket) {
   return eventChannel((emit) => {
     socket.on('connect', () => emit({ type: 'connected' }));
@@ -41,14 +43,16 @@ function createSocketChannel(socket: Socket) {
     socket.on('partner-disconnected', () => { emit({ type: 'partner-disconnected' }); emit(END); });
 
     return () => {
-      ['connect', 'connect_error', 'waiting', 'matched', 'chat-message',
+      [
+        'connect', 'connect_error', 'waiting', 'matched', 'chat-message',
         'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
-        'opponent-resigned', 'partner-disconnected', 'session-error'
+        'opponent-resigned', 'partner-disconnected', 'session-error',
       ].forEach(ev => socket.off(ev));
     };
   });
 }
 
+// ─── Socket event watcher ─────────────────────────────────────────────────────
 function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Generator {
   try {
     while (true) {
@@ -73,9 +77,11 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
   }
 }
 
+// ─── Main session flow ────────────────────────────────────────────────────────
 function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Generator {
   const { userId, topic } = action.payload;
 
+  // ── Get Clerk token + clerkId ─────────────────────────────────────────────
   let token: string | null = null;
   let clerkId: string | null = null;
 
@@ -83,21 +89,48 @@ function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Ge
     const clerk = (window as any).Clerk;
     if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
     if (clerk?.user?.id) clerkId = clerk.user.id as string;
-  } catch { /* Clerk not ready */ }
+  } catch {
+    /* Clerk not ready yet */
+  }
 
   if (!clerkId) {
     yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
     return;
   }
 
-  const socket = (yield call(connectSocket, userId, token, clerkId)) as Socket;
+  // Ensure the user has been synced to the backend DB (by useAuthInit)
+  // before connecting the socket — otherwise both JWT and clerkId lookups
+  // will fail on the server because the user row doesn't exist yet.
+  const dbUserId = localStorage.getItem('db_user_id');
+  if (!dbUserId) {
+    yield put(setSessionError('Your account is still syncing. Please wait a moment and try again.'));
+    return;
+  }
+
+  // ── Connect socket ────────────────────────────────────────────────────────
+  let socket: Socket;
+  try {
+    socket = (yield call(connectSocket, userId, token, clerkId)) as Socket;
+  } catch (err: any) {
+    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown error')));
+    return;
+  }
+
   yield put(setSearching({ topic }));
 
+  // Wait for connection if not already connected
   if (!socket.connected) {
-    yield new Promise<void>((resolve, reject) => {
-      socket.once('connect', () => resolve());
-      socket.once('connect_error', (e: Error) => reject(e));
-    });
+    try {
+      yield new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 8000);
+        socket.once('connect', () => { clearTimeout(timeout); resolve(); });
+        socket.once('connect_error', (e: Error) => { clearTimeout(timeout); reject(e); });
+      });
+    } catch (err: any) {
+      yield put(setSessionError('Could not connect to server: ' + (err?.message ?? 'Timeout')));
+      disconnectSocket();
+      return;
+    }
   }
 
   socket.emit('find-partner', { userId, topic });
@@ -105,6 +138,7 @@ function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Ge
   const channel = createSocketChannel(socket);
   const watchTask: any = yield fork(watchSocketEvents, channel);
 
+  // Wait for user to leave or reset
   yield race({
     leave: take(sessionActions.leaveSession.type),
     reset: take(sessionActions.reset.type),
@@ -117,6 +151,7 @@ function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Ge
   yield put(resetSession());
 }
 
+// ─── Message / action handlers ────────────────────────────────────────────────
 function* handleSendMessage(action: ReturnType<typeof sessionActions.sendMessage>): Generator {
   const socket = getSocket();
   if (!socket?.connected) return;
@@ -158,6 +193,7 @@ function* handleResign(): Generator {
   socket.emit('resign');
 }
 
+// ─── Root saga ────────────────────────────────────────────────────────────────
 export default function* sessionSaga() {
   yield takeLatest(sessionActions.findPartner.type, sessionFlow);
   yield takeEvery(sessionActions.sendMessage.type, handleSendMessage);

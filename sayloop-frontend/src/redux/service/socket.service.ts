@@ -38,9 +38,10 @@ export const connectSocket = (
     autoConnect: false,
     withCredentials: true,
     auth: {
-      token: token ?? '',
-      // clerkId is the critical fallback — each user has a unique one
-      clerkId: clerkId ?? '',
+      // Only send non-empty values — empty strings cause confusing
+      // JWT validation errors on the server
+      ...(token ? { token } : {}),
+      ...(clerkId ? { clerkId } : {}),
     },
   });
 

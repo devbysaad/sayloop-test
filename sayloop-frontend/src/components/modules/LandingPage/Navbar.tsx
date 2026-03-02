@@ -84,7 +84,7 @@ const Navbar = () => {
               </Link>
             </SignedOut>
             <SignedIn>
-              <Link to="/debate">
+              <Link to="/session">
                 <button className="w-full mt-2 text-white py-3 rounded-2xl text-sm"
                   style={{ fontWeight: 800, background: 'linear-gradient(135deg,#fbbf24,#f97316)' }}>
                   Find a partner

@@ -1,17 +1,35 @@
-const express = require('express');
-const router = express.Router();
-const userController = require('./user.controller');
+const express    = require('express');
+const router     = express.Router();
+const controller = require('./user.controller');
 const { clerkAuth, protect } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
+const { validate }           = require('../../middleware/validate.middleware');
 const { syncUserSchema, updateProfileSchema } = require('./user.validation');
-const paths = require('../../config/constants');
 
-// SYNC: clerkAuth only — resolveDbUser cannot run before the user exists in DB
-router.post(paths.SYNC_USER, clerkAuth, validate(syncUserSchema), userController.syncUser);
+// POST /api/users/sync
+// clerkAuth only — resolveDbUser cannot run before the user exists in DB yet
+router.post('/sync',
+  clerkAuth,
+  validate(syncUserSchema),
+  controller.syncUser,
+);
 
-// All other user routes require full protect (clerkAuth + resolveDbUser)
-router.get(paths.GET_ME, protect, userController.getMe);
-router.put(paths.UPDATE_ME, protect, validate(updateProfileSchema), userController.updateMe);
-router.get(paths.GET_MY_STATS, protect, userController.getMyStats);
+// GET  /api/users/me
+router.get('/me',
+  protect,
+  controller.getMe,
+);
+
+// PUT  /api/users/me — also called after onboarding to save language + interests
+router.put('/me',
+  protect,
+  validate(updateProfileSchema),
+  controller.updateMe,
+);
+
+// GET  /api/users/me/stats
+router.get('/me/stats',
+  protect,
+  controller.getMyStats,
+);
 
 module.exports = router;

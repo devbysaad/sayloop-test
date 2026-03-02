@@ -1,77 +1,99 @@
 const { ClerkExpressWithAuth } = require('@clerk/clerk-sdk-node');
 const prisma = require('../config/database');
 
-// ─── Clerk authentication gate ────────────────────────────────────────────────
-// BYPASS FOR DEV: Always call next()
-const clerkAuth = (req, res, next) => {
-  // If Clerk token is valid, it will populate req.auth
-  // If not, we just continue and let resolveDbUser handle the fallback
-  next();
+// ─── Step 1: Clerk token verification ────────────────────────────────────────
+// Populates req.auth = { userId, sessionId, ... } from the Bearer token.
+// Does NOT reject unauthenticated requests by itself — use with resolveDbUser.
+const clerkAuth = ClerkExpressWithAuth();
+
+// ─── Debug wrapper: logs exactly what ClerkExpressWithAuth does ──────────────
+const clerkAuthWithDebug = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const hasToken = !!(authHeader && authHeader.startsWith('Bearer '));
+  const secretKeyPrefix = process.env.CLERK_SECRET_KEY
+    ? process.env.CLERK_SECRET_KEY.substring(0, 12) + '...'
+    : '(NOT SET)';
+
+  console.log('[auth-debug] ─────────────────────────────────────────');
+  console.log('[auth-debug] Path:', req.method, req.originalUrl);
+  console.log('[auth-debug] Authorization header present:', hasToken);
+  if (hasToken) {
+    const token = authHeader.split(' ')[1];
+    console.log('[auth-debug] Token length:', token.length);
+    console.log('[auth-debug] Token preview:', token.substring(0, 20) + '...');
+  }
+  console.log('[auth-debug] CLERK_SECRET_KEY prefix:', secretKeyPrefix);
+
+  // Run the real ClerkExpressWithAuth middleware
+  clerkAuth(req, res, (err) => {
+    if (err) {
+      console.error('[auth-debug] ClerkExpressWithAuth ERROR:', err.message || err);
+      return next(err);
+    }
+    console.log('[auth-debug] req.auth after Clerk:', JSON.stringify(req.auth, null, 2));
+    console.log('[auth-debug] req.auth.userId:', req.auth?.userId ?? '(null/undefined)');
+    console.log('[auth-debug] ─────────────────────────────────────────');
+    next();
+  });
 };
 
-// ─── DB user resolution middleware ────────────────────────────────────────────
+// ─── Step 2: Resolve DB user from clerkId ────────────────────────────────────
+// Requires clerkAuth to have run first (req.auth.userId must be set).
+// Sets req.dbUserId = the internal Postgres user.id for use in controllers.
 const resolveDbUser = async (req, res, next) => {
   try {
-    // Falls back to a default test_user ID if Clerk auth is missing
-    const clerkId = req.auth?.userId || req.headers['x-clerk-id'] || 'user_2m1vD4yJ7pQ9nB8u5r3t0x6z';
+    const clerkId = req.auth?.userId;
 
-    let user = await prisma.user.findUnique({
+    if (!clerkId) {
+      console.warn('[resolveDbUser] No clerkId in req.auth — token may be invalid or expired');
+      return res.status(401).json({ success: false, message: 'Unauthorized — no valid Clerk session' });
+    }
+
+    const user = await prisma.user.findUnique({
       where: { clerkId },
       select: { id: true },
     });
 
-    // If test user doesn't exist, create it on the fly
-    if (!user && clerkId === 'user_2m1vD4yJ7pQ9nB8u5r3t0x6z') {
-      user = await prisma.user.create({
-        data: {
-          clerkId,
-          email: 'test@sayloop.com',
-          username: 'test_user',
-          firstName: 'Test',
-          lastName: 'User',
-        },
-        select: { id: true },
+    if (!user) {
+      // User is authenticated with Clerk but hasn't called /api/users/sync yet.
+      // This can happen if the frontend sends a request before useAuthInit completes.
+      return res.status(401).json({
+        success: false,
+        message: 'User not synced. Call POST /api/users/sync first.',
       });
     }
 
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'User not synced. Call /api/users/sync first.' });
-    }
     req.dbUserId = user.id;
     next();
   } catch (err) {
-    console.error('Auth resolution failed:', err);
+    console.error('[resolveDbUser] Auth resolution failed:', err);
     return res.status(500).json({ success: false, message: 'Auth resolution failed' });
   }
 };
 
-const requireAuth = [clerkAuth, resolveDbUser];
-const protect = requireAuth;
+// ─── Combined middleware stacks ───────────────────────────────────────────────
 
-// ─── Admin guard ──────────────────────────────────────────────────────────────
-// BUG FIXED: User model has no `role` field in schema.
-// Until you add `role String @default("USER")` to the User model in schema.prisma,
-// this middleware always blocks. Stub returns 501 so it's obvious rather than silently 403.
-const adminOnly = async (req, res, next) => {
-  // TODO: add `role String @default("USER") @db.VarChar(20)` to User model,
-  //       run `npx prisma migrate dev --name add_user_role`,
-  //       then replace this stub with the real check below.
-  return res.status(501).json({ success: false, message: 'Admin role not yet implemented in schema' });
+/**
+ * protect / requireAuth
+ * Full auth: verify Clerk token + resolve DB user.
+ * Use on all protected routes. Sets req.dbUserId.
+ *
+ * Usage:
+ *   router.get('/me', protect, controller.getMe)
+ */
+const protect = [clerkAuthWithDebug, resolveDbUser];
+const requireAuth = protect; // alias — use whichever you prefer
 
-  /*  ← uncomment after adding role field:
-  try {
-    const user = await prisma.user.findUnique({
-      where:  { id: req.dbUserId },
-      select: { role: true },
-    });
-    if (!user || user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Forbidden: Admins only' });
-    }
-    next();
-  } catch (err) {
-    return res.status(500).json({ success: false, message: 'Admin check failed' });
-  }
-  */
+/**
+ * adminOnly
+ * Placeholder until an admin role is added to the User model.
+ * Currently blocks all requests with 501.
+ */
+const adminOnly = (req, res, _next) => {
+  return res.status(501).json({
+    success: false,
+    message: 'Admin role not yet implemented',
+  });
 };
 
-module.exports = { clerkAuth, requireAuth, protect, adminOnly };
+module.exports = { clerkAuth: clerkAuthWithDebug, resolveDbUser, protect, requireAuth, adminOnly };

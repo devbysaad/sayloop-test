@@ -32,21 +32,22 @@ const profileSlice = createSlice({
   name: 'profile',
   initialState,
   reducers: {
-    // ── Fetch profile stats ─────────────────────────────────────────────────
     fetchProfileStatsRequest(state, _action: PayloadAction<{ userId: number }>) {
       state.profileLoading = true;
       state.profileError = null;
     },
+
+    // data is already unwrapped by profileService — store directly
     fetchProfileStatsSuccess(state, action: PayloadAction<ProfileStats>) {
       state.profileLoading = false;
       state.profileStats = action.payload;
     },
+
     fetchProfileStatsFailure(state, action: PayloadAction<string>) {
       state.profileLoading = false;
       state.profileError = action.payload;
     },
 
-    // ── Reset ───────────────────────────────────────────────────────────────
     resetProfile() {
       return initialState;
     },

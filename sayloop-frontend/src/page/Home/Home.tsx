@@ -42,7 +42,7 @@ const HomePage = () => {
           ))}
         </div>
 
-        <Link to="/debate">
+        <Link to="/session">
           <button className="bg-linear-to-br from-[#fbbf24] to-[#f97316] text-white font-[800] text-[14px] px-7 py-3 rounded-[14px] border-none cursor-pointer font-sans shadow-[0_8px_22px_rgba(251,191,36,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(251,191,36,0.55)] active:scale-95">
             Find Partner 🚀
           </button>
@@ -101,7 +101,7 @@ const HomePage = () => {
       <div className="animate-fade-in-up [animation-delay:280ms] bg-white border-2 border-[#fef3c7] rounded-[20px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] font-sans">
         <div className="flex items-center justify-between mb-3.5">
           <p className="font-[900] text-[#1a1a26] text-[14px] m-0 text-amber-900">Recent Conversations</p>
-          <Link to="/debate" className="text-[#f59e0b] font-[800] text-[12px] no-underline hover:underline tracking-tight">Find new →</Link>
+          <Link to="/session" className="text-[#f59e0b] font-[800] text-[12px] no-underline hover:underline tracking-tight">Find new →</Link>
         </div>
 
         {[

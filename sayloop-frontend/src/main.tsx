@@ -9,11 +9,11 @@ import { BrowserRouter, useNavigate } from 'react-router-dom'
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error('Add your Clerk Publishable Key to the .env file')
+  throw new Error('Add VITE_CLERK_PUBLISHABLE_KEY to your .env file')
 }
 
 function ClerkProviderWithRoutes({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <ClerkProvider
@@ -22,14 +22,14 @@ function ClerkProviderWithRoutes({ children }: { children: React.ReactNode }) {
       routerReplace={(to) => navigate(to, { replace: true })}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      afterSignInUrl="/home"
-      afterSignUpUrl="/home"
+      // Always redirect to /home after auth.
+      // OnboardingGuard on /home will send new users to /onboarding automatically.
       signInFallbackRedirectUrl="/home"
       signUpFallbackRedirectUrl="/home"
     >
       {children}
     </ClerkProvider>
-  );
+  )
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -41,16 +41,21 @@ io.use(async (socket, next) => {
       const payload = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY,
       });
-      const user = await prisma.user.findUnique({
-        where: { clerkId: payload.sub },
-        select: { id: true },
-      });
-      if (user) {
-        socket.dbUserId = user.id;
-        console.log(`[Socket] JWT OK — dbUserId:${user.id} socketId:${socket.id}`);
-        return next();
+      try {
+        const user = await prisma.user.findUnique({
+          where: { clerkId: payload.sub },
+          select: { id: true },
+        });
+        if (user) {
+          socket.dbUserId = user.id;
+          console.log(`[Socket] JWT OK — dbUserId:${user.id} socketId:${socket.id}`);
+          return next();
+        }
+        return next(new Error('User not synced. Call /api/users/sync first.'));
+      } catch (dbErr) {
+        console.error(`[Socket] DB error during JWT path: ${dbErr.message}`);
+        return next(new Error('Database unavailable — please try again shortly.'));
       }
-      return next(new Error('User not synced. Call /api/users/sync first.'));
     } catch (err) {
       // JWT invalid (wrong key, expired, etc.) — try clerkId fallback
       console.warn(`[Socket] JWT failed (${err.message}) — trying clerkId fallback`);
@@ -72,6 +77,12 @@ io.use(async (socket, next) => {
       console.warn(`[Socket] clerkId not in DB: ${clerkId}`);
       return next(new Error('User not synced. Call /api/users/sync first.'));
     } catch (err) {
+      // Distinguish DB connection errors from other errors
+      const isDbError = err.message?.includes("Can't reach database") || err.message?.includes('connect');
+      if (isDbError) {
+        console.error(`[Socket] Database unreachable: ${err.message}`);
+        return next(new Error('Database unavailable — please try again shortly.'));
+      }
       console.error(`[Socket] DB lookup failed: ${err.message}`);
       return next(new Error('Auth resolution failed'));
     }

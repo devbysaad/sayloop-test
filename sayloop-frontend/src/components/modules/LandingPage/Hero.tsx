@@ -51,7 +51,7 @@ const Hero = () => {
 
             <div className="animate-fade-in-up [animation-delay:300ms] flex flex-col sm:flex-row gap-4 mb-10">
               {isSignedIn ? (
-                <Link to="/debate">
+                <Link to="/session">
                   <button className="text-white text-base px-9 py-4 rounded-2xl transition-all hover:-translate-y-1 font-[800] bg-linear-to-br from-[#fbbf24] to-[#f97316] shadow-[0_8px_24px_rgba(251,191,36,0.45)]">
                     Find someone to talk to 🚀
                   </button>
