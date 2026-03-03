@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions } from '../../redux/saga/session.saga';
@@ -20,26 +20,13 @@ const DebatePage = () => {
     topic?: string;
   } | null;
 
-  const [dbUserId, setDbUserId] = useState<number | null>(() => {
+  const dbUserId = (() => {
     const stored = localStorage.getItem('db_user_id');
     return stored ? parseInt(stored, 10) : null;
-  });
-
-  // Poll localStorage every 500ms until useAuthInit writes db_user_id
-  useEffect(() => {
-    if (dbUserId) return;
-    const interval = setInterval(() => {
-      const stored = localStorage.getItem('db_user_id');
-      if (stored) {
-        setDbUserId(parseInt(stored, 10));
-        clearInterval(interval);
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [dbUserId]);
+  })();
 
   // On mount: if no sessionId in router state → send to /match
-  // If sessionId present → kick off the saga
+  // If sessionId present → join the existing session (NOT random matchmaking)
   useEffect(() => {
     if (!dbUserId) return;
 
@@ -51,8 +38,11 @@ const DebatePage = () => {
 
     if (status === 'idle' && !hasStarted.current) {
       hasStarted.current = true;
-      dispatch(sessionActions.findPartner({
+      // KEY FIX: dispatch joinSession (joins existing match room)
+      // instead of findPartner (starts random queue search)
+      dispatch(sessionActions.joinSession({
         userId: dbUserId,
+        sessionId: locationState.sessionId,
         topic: locationState.topic ?? '',
       }));
     }
@@ -66,10 +56,12 @@ const DebatePage = () => {
     }
   }, [status, navigate]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — but NOT on initial mount (prevents StrictMode double-fire)
   useEffect(() => {
     return () => {
-      dispatch(sessionActions.leaveSession());
+      if (hasStarted.current) {
+        dispatch(sessionActions.leaveSession());
+      }
     };
   }, [dispatch]);
 

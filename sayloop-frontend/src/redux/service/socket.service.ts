@@ -7,22 +7,12 @@ export const getSocket = (): Socket | null => {
 };
 
 /**
- * connectSocket
+ * getOrCreateSocket
  *
- * ROOT CAUSE FIX:
- * Previously all sockets fell back to the same mock user (dbUserId:6) because:
- *   - token was passed as undefined (saga only provided userId, not token)
- *   - server had no clerkId to fall back on
- *   - server used a hardcoded shared test clerkId for EVERYONE
- *
- * Now we pass BOTH token AND clerkId in the handshake:
- *   - token  → server verifies via Clerk JWT (most secure, production path)
- *   - clerkId → server does a direct DB lookup (dev fallback, still per-user)
- *
- * This guarantees each real user gets their OWN socket.dbUserId.
+ * Returns the existing connected socket or creates a new one.
+ * Used by both match and session flows to share a single connection.
  */
-export const connectSocket = (
-  _userId: number,
+export const getOrCreateSocket = (
   token: string | null,
   clerkId?: string | null,
 ): Socket => {
@@ -38,8 +28,6 @@ export const connectSocket = (
     autoConnect: false,
     withCredentials: true,
     auth: {
-      // Only send non-empty values — empty strings cause confusing
-      // JWT validation errors on the server
       ...(token ? { token } : {}),
       ...(clerkId ? { clerkId } : {}),
     },
@@ -47,6 +35,32 @@ export const connectSocket = (
 
   socket.connect();
   return socket;
+};
+
+/**
+ * ensureConnected
+ *
+ * Returns a promise that resolves when the socket is connected.
+ * Rejects after a timeout.
+ */
+export const ensureConnected = (sock: Socket, timeoutMs = 8000): Promise<void> => {
+  if (sock.connected) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Connection timeout')), timeoutMs);
+    sock.once('connect', () => { clearTimeout(timeout); resolve(); });
+    sock.once('connect_error', (e: Error) => { clearTimeout(timeout); reject(e); });
+  });
+};
+
+/**
+ * connectSocket  (backwards-compatible wrapper)
+ */
+export const connectSocket = (
+  _userId: number,
+  token: string | null,
+  clerkId?: string | null,
+): Socket => {
+  return getOrCreateSocket(token, clerkId);
 };
 
 export const disconnectSocket = (): void => {

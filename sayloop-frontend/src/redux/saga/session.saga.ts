@@ -4,7 +4,7 @@ import {
 } from 'redux-saga/effects';
 import { createAction } from '@reduxjs/toolkit';
 import { eventChannel, END } from 'redux-saga';
-import { connectSocket, disconnectSocket, getSocket } from '../service/socket.service';
+import { getOrCreateSocket, ensureConnected, disconnectSocket, getSocket } from '../service/socket.service';
 import type { Socket } from 'socket.io-client';
 import {
   setSearching, setMatched, setInSession,
@@ -15,7 +15,10 @@ import {
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 export const sessionActions = {
+  // Random matchmaking (find-partner queue) — kept for future "quick match"
   findPartner: createAction<{ userId: number; topic: string }>('session/findPartner'),
+  // Join an existing match session (from accepted match)
+  joinSession: createAction<{ userId: number; sessionId: string; topic: string }>('session/joinSession'),
   sendMessage: createAction<{ message: string }>('session/sendMessage'),
   submitArgument: createAction<{ argument: string }>('session/submitArgument'),
   offerDraw: createAction('session/offerDraw'),
@@ -33,6 +36,8 @@ function createSocketChannel(socket: Socket) {
     socket.on('connect_error', (e: Error) => emit({ type: 'connect_error', message: e.message }));
     socket.on('waiting', (d: any) => emit({ type: 'waiting', ...d }));
     socket.on('matched', (d: any) => emit({ type: 'matched', ...d }));
+    socket.on('session-joined', (d: any) => emit({ type: 'session-joined', ...d }));
+    socket.on('partner-joined', (d: any) => emit({ type: 'partner-joined', ...d }));
     socket.on('chat-message', (d: any) => emit({ type: 'chat-message', ...d }));
     socket.on('debate-argument', (d: any) => emit({ type: 'debate-argument', ...d }));
     socket.on('draw-received', () => emit({ type: 'draw-received' }));
@@ -44,8 +49,8 @@ function createSocketChannel(socket: Socket) {
 
     return () => {
       [
-        'connect', 'connect_error', 'waiting', 'matched', 'chat-message',
-        'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
+        'connect', 'connect_error', 'waiting', 'matched', 'session-joined', 'partner-joined',
+        'chat-message', 'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
         'opponent-resigned', 'partner-disconnected', 'session-error',
       ].forEach(ev => socket.off(ev));
     };
@@ -62,6 +67,21 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
         case 'connect_error': yield put(setSessionError('Connection failed: ' + event.message)); break;
         case 'waiting': yield put(setWaitingMessage(event.message)); break;
         case 'matched': yield put(setMatched({ sessionId: event.sessionId, partner: event.partner, isInitiator: event.isInitiator })); break;
+        case 'session-joined': {
+          // We joined an existing session room — enter the session
+          yield put(setMatched({
+            sessionId: event.sessionId,
+            partner: event.partner,
+            isInitiator: event.isInitiator,
+          }));
+          yield put(setInSession());
+          break;
+        }
+        case 'partner-joined': {
+          // Our partner joined the session room — now both are here
+          yield put(setInSession());
+          break;
+        }
         case 'chat-message': yield put(receiveMessage({ userId: event.userId, message: event.message, isMe: false, timestamp: event.timestamp })); break;
         case 'debate-argument': yield put(receiveArgument({ userId: event.userId, argument: event.argument, isMe: false, timestamp: event.timestamp })); break;
         case 'draw-received': yield put(setDrawReceived()); break;
@@ -77,40 +97,39 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
   }
 }
 
-// ─── Main session flow ────────────────────────────────────────────────────────
-function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Generator {
-  const { userId, topic } = action.payload;
-
-  // ── Get Clerk token + clerkId ─────────────────────────────────────────────
+// ─── Helper: get Clerk auth ──────────────────────────────────────────────────
+function* getClerkAuth(): Generator {
   let token: string | null = null;
   let clerkId: string | null = null;
-
   try {
     const clerk = (window as any).Clerk;
     if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
     if (clerk?.user?.id) clerkId = clerk.user.id as string;
-  } catch {
-    /* Clerk not ready yet */
-  }
+  } catch { /* Clerk not ready */ }
+  return { token, clerkId };
+}
 
-  if (!clerkId) {
+// ─── Join existing session flow (from accepted match) ─────────────────────────
+function* joinSessionFlow(action: ReturnType<typeof sessionActions.joinSession>): Generator {
+  const { userId, sessionId, topic } = action.payload;
+
+  const auth: any = yield call(getClerkAuth);
+  if (!auth.clerkId) {
     yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
     return;
   }
 
-  // Ensure the user has been synced to the backend DB (by useAuthInit)
-  // before connecting the socket — otherwise both JWT and clerkId lookups
-  // will fail on the server because the user row doesn't exist yet.
   const dbUserId = localStorage.getItem('db_user_id');
   if (!dbUserId) {
     yield put(setSessionError('Your account is still syncing. Please wait a moment and try again.'));
     return;
   }
 
-  // ── Connect socket ────────────────────────────────────────────────────────
+  // Connect socket (reuses existing if already connected)
   let socket: Socket;
   try {
-    socket = (yield call(connectSocket, userId, token, clerkId)) as Socket;
+    socket = (yield call(getOrCreateSocket, auth.token, auth.clerkId)) as Socket;
+    yield call(ensureConnected, socket);
   } catch (err: any) {
     yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown error')));
     return;
@@ -118,21 +137,52 @@ function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Ge
 
   yield put(setSearching({ topic }));
 
-  // Wait for connection if not already connected
-  if (!socket.connected) {
-    try {
-      yield new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 8000);
-        socket.once('connect', () => { clearTimeout(timeout); resolve(); });
-        socket.once('connect_error', (e: Error) => { clearTimeout(timeout); reject(e); });
-      });
-    } catch (err: any) {
-      yield put(setSessionError('Could not connect to server: ' + (err?.message ?? 'Timeout')));
-      disconnectSocket();
-      return;
-    }
+  // Join the existing session room on the server
+  socket.emit('match:join-session', { sessionId });
+
+  // Set up event channel for all session events
+  const channel = createSocketChannel(socket);
+  const watchTask: any = yield fork(watchSocketEvents, channel);
+
+  // Wait for user to leave or reset
+  yield race({
+    leave: take(sessionActions.leaveSession.type),
+    reset: take(sessionActions.reset.type),
+  });
+
+  yield cancel(watchTask);
+  channel.close();
+  socket.emit('leave-session');
+  disconnectSocket();
+  yield put(resetSession());
+}
+
+// ─── Random matchmaking flow (find-partner queue) ─────────────────────────────
+function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Generator {
+  const { userId, topic } = action.payload;
+
+  const auth: any = yield call(getClerkAuth);
+  if (!auth.clerkId) {
+    yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
+    return;
   }
 
+  const dbUserId = localStorage.getItem('db_user_id');
+  if (!dbUserId) {
+    yield put(setSessionError('Your account is still syncing. Please wait a moment and try again.'));
+    return;
+  }
+
+  let socket: Socket;
+  try {
+    socket = (yield call(getOrCreateSocket, auth.token, auth.clerkId)) as Socket;
+    yield call(ensureConnected, socket);
+  } catch (err: any) {
+    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown error')));
+    return;
+  }
+
+  yield put(setSearching({ topic }));
   socket.emit('find-partner', { userId, topic });
 
   const channel = createSocketChannel(socket);
@@ -196,6 +246,7 @@ function* handleResign(): Generator {
 // ─── Root saga ────────────────────────────────────────────────────────────────
 export default function* sessionSaga() {
   yield takeLatest(sessionActions.findPartner.type, sessionFlow);
+  yield takeLatest(sessionActions.joinSession.type, joinSessionFlow);
   yield takeEvery(sessionActions.sendMessage.type, handleSendMessage);
   yield takeEvery(sessionActions.submitArgument.type, handleSubmitArgument);
   yield takeEvery(sessionActions.offerDraw.type, handleOfferDraw);

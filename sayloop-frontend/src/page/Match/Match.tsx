@@ -20,7 +20,7 @@ const MatchPage = () => {
   const {
     users, usersLoading, cardIdx,
     mode, pendingMatchId, pendingPartner, pendingTopic,
-    matchedSessionId, matchedPartner, matchedTopic,
+    matchedMatchId, matchedSessionId, matchedPartner, matchedTopic,
     requests, requestsLoading,
     history, historyLoading,
     toast,
@@ -28,6 +28,13 @@ const MatchPage = () => {
 
   const [tab, setTab] = useState<Tab>('browse');
   const [topic, setTopic] = useState('');
+
+  // Initialize match socket listener on mount
+  useEffect(() => {
+    if (myUserId) {
+      dispatch(matchActions.initMatchSocket());
+    }
+  }, [myUserId]);
 
   // Load users on mount
   useEffect(() => {
@@ -40,6 +47,19 @@ const MatchPage = () => {
     if (tab === 'history') dispatch(matchActions.loadHistory({ userId: myUserId }));
   }, [tab]);
 
+  // When mode becomes 'confirmed', navigate to /session with the sessionId
+  useEffect(() => {
+    if (mode === 'confirmed' && matchedSessionId) {
+      const sessionId = matchedSessionId;
+      const topic = matchedTopic;
+      const partnerId = matchedPartner?.id;
+      dispatch(clearMatched());
+      navigate('/session', {
+        state: { sessionId, partnerId, topic },
+      });
+    }
+  }, [mode, matchedSessionId]);
+
   const handleSend = () => {
     const partner = users[cardIdx];
     if (!topic || !partner) return;
@@ -48,16 +68,15 @@ const MatchPage = () => {
   };
 
   const handleSkip = () => {
-    // Just advance the card — no API call needed
     dispatch({ type: 'match/nextCard' });
     setTopic('');
   };
 
-  const goToSession = (sessionId: string) => {
-    dispatch(clearMatched());
-    navigate('/session', {
-      state: { sessionId, partnerId: matchedPartner?.id, topic: matchedTopic },
-    });
+  // "Let's Go" — emit confirm-ready via socket, wait for match:session-start
+  const handleLetsGo = () => {
+    if (matchedMatchId) {
+      dispatch(matchActions.confirmReady({ matchId: matchedMatchId }));
+    }
   };
 
   const currentUser = users[cardIdx] ?? null;
@@ -86,13 +105,13 @@ const MatchPage = () => {
         <Toast message={toast.msg} type={toast.type} onClose={() => dispatch(clearToast())} />
       )}
 
-      {/* MatchFoundModal — for User 1 after partner accepts */}
+      {/* MatchFoundModal — shows when match is accepted, user clicks "Let's Go" to confirm */}
       {mode === 'matched' && matchedPartner && (
         <MatchFoundModal
           partner={matchedPartner}
           topic={matchedTopic}
           sessionId={matchedSessionId}
-          onStart={() => goToSession(matchedSessionId)}
+          onStart={handleLetsGo}
           onCancel={() => dispatch(clearMatched())}
         />
       )}
@@ -172,7 +191,7 @@ const MatchPage = () => {
             myUserId={myUserId}
             onAccept={(match) => dispatch(matchActions.acceptRequest({ matchId: match.id, match }))}
             onReject={(matchId) => dispatch(matchActions.rejectRequest({ matchId }))}
-            onStartSession={goToSession}
+            onStartSession={handleLetsGo}
           />
         )}
 

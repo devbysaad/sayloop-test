@@ -1,13 +1,16 @@
 import {
   call, put, take, fork, cancel, cancelled,
-  takeLatest, takeEvery, delay, race, select,
+  takeLatest, takeEvery, delay, select,
 } from 'redux-saga/effects';
 import { createAction } from '@reduxjs/toolkit';
+import { eventChannel, END } from 'redux-saga';
+import type { Socket } from 'socket.io-client';
 import matchService, { type Match, type MatchUser } from '../service/match.service';
+import { getOrCreateSocket, ensureConnected, getSocket } from '../service/socket.service';
 import { markMatchSeen } from '../../hooks/UserMatchNotification';
 import {
   setUsersLoading, setUsers, nextCard,
-  setWaiting, setMatched, cancelWaiting,
+  setWaiting, setMatched, cancelWaiting, setConfirmed,
   setRequestsLoading, setRequests, removeRequest,
   setHistoryLoading, setHistory,
   setNotification,
@@ -23,9 +26,131 @@ export const matchActions = {
   loadHistory: createAction<{ userId: number }>('match/loadHistory'),
   acceptRequest: createAction<{ matchId: number; match: Match }>('match/acceptRequest'),
   rejectRequest: createAction<{ matchId: number }>('match/rejectRequest'),
-  startPollingNotifications: createAction<{ userId: number }>('match/startPollingNotifications'),
-  stopPollingNotifications: createAction('match/stopPollingNotifications'),
+  confirmReady: createAction<{ matchId: number }>('match/confirmReady'),
+  initMatchSocket: createAction('match/initMatchSocket'),
 };
+
+// ─── Helper: get Clerk auth for socket ────────────────────────────────────────
+function* getClerkAuth(): Generator {
+  let token: string | null = null;
+  let clerkId: string | null = null;
+  try {
+    const clerk = (window as any).Clerk;
+    if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
+    if (clerk?.user?.id) clerkId = clerk.user.id as string;
+  } catch { /* Clerk not ready */ }
+  return { token, clerkId };
+}
+
+// ─── Match socket event channel ───────────────────────────────────────────────
+function createMatchEventChannel(socket: Socket) {
+  return eventChannel<any>((emit) => {
+    socket.on('match:request-received', (d: any) => emit({ type: 'match:request-received', ...d }));
+    socket.on('match:accepted', (d: any) => emit({ type: 'match:accepted', ...d }));
+    socket.on('match:rejected', (d: any) => emit({ type: 'match:rejected', ...d }));
+    socket.on('match:expired', (d: any) => emit({ type: 'match:expired', ...d }));
+    socket.on('match:session-start', (d: any) => emit({ type: 'match:session-start', ...d }));
+
+    return () => {
+      socket.off('match:request-received');
+      socket.off('match:accepted');
+      socket.off('match:rejected');
+      socket.off('match:expired');
+      socket.off('match:session-start');
+    };
+  });
+}
+
+// ─── Watch match socket events (global) ───────────────────────────────────────
+function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChannel>): Generator {
+  try {
+    while (true) {
+      const event: any = yield take(channel);
+      switch (event.type) {
+        case 'match:request-received': {
+          // User 2 receives a match request in real-time
+          // Build a minimal Match-like object for the notification
+          const notif: any = {
+            id: event.matchId,
+            topic: event.topic,
+            requester: event.requester,
+            status: 'pending',
+          };
+          yield put(setNotification(notif));
+          break;
+        }
+        case 'match:accepted': {
+          // Both users receive this when the match is accepted
+          const matchId = event.matchId;
+          markMatchSeen(matchId);
+
+          // Build partner from whichever side the current user is NOT
+          const myId = Number(localStorage.getItem('db_user_id') ?? '0');
+          const isRequester = event.requester?.id === myId;
+          const partnerData = isRequester ? event.receiver : event.requester;
+
+          const partner: MatchUser = {
+            id: partnerData?.id ?? 0,
+            firstName: partnerData?.firstName ?? 'Partner',
+            username: partnerData?.username ?? '',
+            pfpSource: partnerData?.pfpSource ?? null,
+            points: partnerData?.points ?? 0,
+            learningLanguage: '',
+            interests: [],
+            streakLength: 0,
+          };
+
+          yield put(setMatched({
+            matchId,
+            sessionId: event.sessionId ?? '',
+            partner,
+            topic: event.topic ?? '',
+          }));
+          break;
+        }
+        case 'match:rejected': {
+          yield put(cancelWaiting());
+          yield put(showToast({ msg: 'Request declined. Try someone else!', type: 'error' }));
+          break;
+        }
+        case 'match:expired': {
+          yield put(cancelWaiting());
+          yield put(showToast({ msg: 'Match request expired.', type: 'error' }));
+          break;
+        }
+        case 'match:session-start': {
+          // Both users confirmed — session is ready
+          yield put(setConfirmed({
+            sessionId: event.sessionId,
+            matchId: event.matchId,
+          }));
+          break;
+        }
+      }
+    }
+  } finally {
+    if (yield cancelled()) channel.close();
+  }
+}
+
+// ─── Initialize persistent match socket listener ──────────────────────────────
+function* handleInitMatchSocket(): Generator {
+  const dbUserId = localStorage.getItem('db_user_id');
+  if (!dbUserId) return;
+
+  const auth: any = yield call(getClerkAuth);
+  if (!auth.clerkId) return;
+
+  try {
+    const socket: Socket = yield call(getOrCreateSocket, auth.token, auth.clerkId);
+    yield call(ensureConnected, socket);
+
+    const channel = createMatchEventChannel(socket);
+    yield fork(watchMatchSocketEvents, channel);
+  } catch (err: any) {
+    console.warn('[MatchSaga] Could not init match socket:', err?.message);
+  }
+}
 
 // ─── Load browse users ────────────────────────────────────────────────────────
 function* handleLoadUsers(action: ReturnType<typeof matchActions.loadUsers>): Generator {
@@ -39,7 +164,7 @@ function* handleLoadUsers(action: ReturnType<typeof matchActions.loadUsers>): Ge
   }
 }
 
-// ─── Send match request + poll until accepted/rejected ────────────────────────
+// ─── Send match request ─────────────────────────────────────────────────────
 function* handleSendRequest(action: ReturnType<typeof matchActions.sendRequest>): Generator {
   const { userId, partnerId, topic, partner } = action.payload;
   try {
@@ -52,50 +177,13 @@ function* handleSendRequest(action: ReturnType<typeof matchActions.sendRequest>)
     // Switch UI to waiting mode
     yield put(setWaiting({ matchId, partner, topic }));
 
-    // Poll every 3s until accepted, rejected, expired, or cancelled
-    yield race({
-      result: call(pollMatchStatus, matchId, partner, topic),
-      cancel: take(matchActions.cancelWaiting.type),
-    });
-
-    // If race won by cancel — already handled by cancelWaiting reducer
+    // No more polling — socket events (match:accepted, match:rejected, match:expired)
+    // will be handled by the global watchMatchSocketEvents listener
   } catch (err: any) {
     yield put(showToast({
       msg: err?.response?.data?.message ?? 'Failed to send request',
       type: 'error',
     }));
-  }
-}
-
-function* pollMatchStatus(
-  matchId: number,
-  partner: MatchUser,
-  topic: string,
-): Generator {
-  try {
-    while (true) {
-      yield delay(3000);
-      const match = (yield call(matchService.getMatchById, matchId)) as Match;
-
-      if (match.status === 'accepted' && match.sessionId) {
-        yield put(setMatched({
-          sessionId: match.sessionId,
-          partner,
-          topic,
-        }));
-        return;
-      }
-
-      if (match.status === 'rejected' || match.status === 'expired') {
-        yield put(cancelWaiting());
-        yield put(showToast({ msg: 'Request declined or expired. Try someone else!', type: 'error' }));
-        return;
-      }
-    }
-  } finally {
-    if (yield cancelled()) {
-      // Race was cancelled by matchActions.cancelWaiting — nothing extra needed
-    }
   }
 }
 
@@ -130,11 +218,11 @@ function* handleAcceptRequest(action: ReturnType<typeof matchActions.acceptReque
   try {
     const result = (yield call(matchService.acceptMatch, matchId)) as any;
     yield put(removeRequest(matchId));
-    // Prevent GlobalMatchWatcher from re-showing this match
     markMatchSeen(matchId);
 
+    // The socket event 'match:accepted' will fire for BOTH users shortly after.
+    // For the accepting user (User 2), we also set matched immediately from the REST response.
     if (result?.sessionId) {
-      // Build partner shape from requester
       const partner: MatchUser = {
         id: match.requester.id,
         firstName: match.requester.firstName ?? 'Partner',
@@ -145,7 +233,7 @@ function* handleAcceptRequest(action: ReturnType<typeof matchActions.acceptReque
         interests: [],
         streakLength: 0,
       };
-      yield put(setMatched({ sessionId: result.sessionId, partner, topic: match.topic }));
+      yield put(setMatched({ matchId, sessionId: result.sessionId, partner, topic: match.topic }));
     }
   } catch (err: any) {
     yield put(showToast({
@@ -169,37 +257,15 @@ function* handleRejectRequest(action: ReturnType<typeof matchActions.rejectReque
   }
 }
 
-// ─── Global notification polling (User 2 anywhere in app) ────────────────────
-// Tracks match IDs already notified so we never fire twice
-const notifiedIds = new Set<number>();
-
-function* pollNotifications(action: ReturnType<typeof matchActions.startPollingNotifications>): Generator {
-  try {
-    while (true) {
-      yield delay(15000);
-      const active = (yield call(matchService.getActiveMatches, action.payload.userId)) as Match[];
-      for (const m of active) {
-        if (
-          m.status === 'accepted' &&
-          m.receiverId === action.payload.userId &&
-          !notifiedIds.has(m.id)
-        ) {
-          notifiedIds.add(m.id);
-          yield put(setNotification(m));
-          break;
-        }
-      }
-    }
-  } finally { /* cancelled on stopPollingNotifications */ }
-}
-
-function* watchNotifications(): Generator {
-  while (true) {
-    const startAction = (yield take(matchActions.startPollingNotifications.type)) as any;
-    const task: any = yield fork(pollNotifications, startAction);
-    yield take(matchActions.stopPollingNotifications.type);
-    yield cancel(task);
+// ─── Confirm ready ("Let's Go" button) ────────────────────────────────────────
+function* handleConfirmReady(action: ReturnType<typeof matchActions.confirmReady>): Generator {
+  const socket = getSocket();
+  if (!socket?.connected) {
+    yield put(showToast({ msg: 'Connection lost. Please refresh.', type: 'error' }));
+    return;
   }
+  socket.emit('match:confirm-ready', { matchId: action.payload.matchId });
+  // The match:session-start event will arrive via the socket channel when both users confirm
 }
 
 // ─── Root match saga ──────────────────────────────────────────────────────────
@@ -210,5 +276,6 @@ export default function* matchSaga() {
   yield takeLatest(matchActions.loadHistory.type, handleLoadHistory);
   yield takeEvery(matchActions.acceptRequest.type, handleAcceptRequest);
   yield takeEvery(matchActions.rejectRequest.type, handleRejectRequest);
-  yield fork(watchNotifications);
+  yield takeEvery(matchActions.confirmReady.type, handleConfirmReady);
+  yield takeEvery(matchActions.initMatchSocket.type, handleInitMatchSocket);
 }

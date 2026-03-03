@@ -7,6 +7,7 @@ const database = require('./config/database');
 const { Server } = require('socket.io');
 const { verifyToken } = require('@clerk/clerk-sdk-node');
 const { registerSessionHandlers } = require('./modules/sessions/session.socket');
+const { registerMatchHandlers } = require('./modules/match/match.socket');
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
@@ -20,6 +21,9 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+
+// Expose io on the Express app so controllers can emit events after REST calls
+app.set('io', io);
 
 io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token;
@@ -38,7 +42,8 @@ io.use(async (socket, next) => {
         });
         if (user) {
           socket.dbUserId = user.id;
-          console.log(`[Socket] JWT OK — dbUserId:${user.id} socketId:${socket.id}`);
+          socket.join(`user:${user.id}`);
+          console.log(`[Socket] JWT OK — dbUserId:${user.id} socketId:${socket.id}, joined room user:${user.id}`);
           return next();
         }
         return next(new Error('User not synced. Call /api/users/sync first.'));
@@ -60,7 +65,8 @@ io.use(async (socket, next) => {
       });
       if (user) {
         socket.dbUserId = user.id;
-        console.log(`[Socket] clerkId OK — dbUserId:${user.id} socketId:${socket.id}`);
+        socket.join(`user:${user.id}`);
+        console.log(`[Socket] clerkId OK — dbUserId:${user.id} socketId:${socket.id}, joined room user:${user.id}`);
         return next();
       }
       console.warn(`[Socket] clerkId not in DB: ${clerkId}`);
@@ -81,6 +87,7 @@ io.use(async (socket, next) => {
 });
 
 registerSessionHandlers(io);
+registerMatchHandlers(io);
 
 const startServer = async () => {
   if (connectFn) {

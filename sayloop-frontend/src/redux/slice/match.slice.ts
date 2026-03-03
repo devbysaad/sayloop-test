@@ -2,39 +2,40 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Match, MatchUser } from '../../lib/matchApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type MatchMode = 'browse' | 'waiting' | 'matched';
+export type MatchMode = 'browse' | 'waiting' | 'matched' | 'confirmed';
 
 interface Toast {
-  msg:  string;
+  msg: string;
   type: 'success' | 'error';
 }
 
 interface MatchState {
   // Browse tab
-  users:        MatchUser[];
+  users: MatchUser[];
   usersLoading: boolean;
-  cardIdx:      number;
+  cardIdx: number;
 
   // Sending a request (User 1)
-  mode:           MatchMode;
+  mode: MatchMode;
   pendingMatchId: number | null;
   pendingPartner: MatchUser | null;
-  pendingTopic:   string;
+  pendingTopic: string;
 
   // After both sides ready
+  matchedMatchId: number | null;
   matchedSessionId: string;
-  matchedPartner:   MatchUser | null;
-  matchedTopic:     string;
+  matchedPartner: MatchUser | null;
+  matchedTopic: string;
 
   // Incoming requests tab (User 2)
-  requests:        Match[];
+  requests: Match[];
   requestsLoading: boolean;
 
   // History tab
-  history:        Match[];
+  history: Match[];
   historyLoading: boolean;
 
-  // Global notification — fires for User 2 anywhere in the app
+  // Global notification — fires for User 2 anywhere in the app (via socket)
   notification: Match | null;
 
   // UI
@@ -43,28 +44,29 @@ interface MatchState {
 }
 
 const initialState: MatchState = {
-  users:        [],
+  users: [],
   usersLoading: false,
-  cardIdx:      0,
+  cardIdx: 0,
 
-  mode:           'browse',
+  mode: 'browse',
   pendingMatchId: null,
   pendingPartner: null,
-  pendingTopic:   '',
+  pendingTopic: '',
 
+  matchedMatchId: null,
   matchedSessionId: '',
-  matchedPartner:   null,
-  matchedTopic:     '',
+  matchedPartner: null,
+  matchedTopic: '',
 
-  requests:        [],
+  requests: [],
   requestsLoading: false,
 
-  history:        [],
+  history: [],
   historyLoading: false,
 
   notification: null,
-  toast:        null,
-  error:        null,
+  toast: null,
+  error: null,
 };
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
@@ -78,7 +80,7 @@ const matchSlice = createSlice({
       state.usersLoading = action.payload;
     },
     setUsers(state, action: PayloadAction<MatchUser[]>) {
-      state.users        = action.payload;
+      state.users = action.payload;
       state.usersLoading = false;
     },
     nextCard(state) {
@@ -92,38 +94,49 @@ const matchSlice = createSlice({
     setWaiting(state, action: PayloadAction<{
       matchId: number;
       partner: MatchUser;
-      topic:   string;
+      topic: string;
     }>) {
-      state.mode           = 'waiting';
+      state.mode = 'waiting';
       state.pendingMatchId = action.payload.matchId;
       state.pendingPartner = action.payload.partner;
-      state.pendingTopic   = action.payload.topic;
+      state.pendingTopic = action.payload.topic;
     },
     setMatched(state, action: PayloadAction<{
+      matchId: number;
       sessionId: string;
-      partner:   MatchUser;
-      topic:     string;
+      partner: MatchUser;
+      topic: string;
     }>) {
-      state.mode             = 'matched';
+      state.mode = 'matched';
+      state.matchedMatchId = action.payload.matchId;
       state.matchedSessionId = action.payload.sessionId;
-      state.matchedPartner   = action.payload.partner;
-      state.matchedTopic     = action.payload.topic;
+      state.matchedPartner = action.payload.partner;
+      state.matchedTopic = action.payload.topic;
       // clear waiting state
-      state.pendingMatchId   = null;
-      state.pendingPartner   = null;
-      state.pendingTopic     = '';
-    },
-    cancelWaiting(state) {
-      state.mode           = 'browse';
       state.pendingMatchId = null;
       state.pendingPartner = null;
-      state.pendingTopic   = '';
+      state.pendingTopic = '';
+    },
+    setConfirmed(state, action: PayloadAction<{
+      sessionId: string;
+      matchId: number;
+    }>) {
+      state.mode = 'confirmed';
+      state.matchedSessionId = action.payload.sessionId;
+      state.matchedMatchId = action.payload.matchId;
+    },
+    cancelWaiting(state) {
+      state.mode = 'browse';
+      state.pendingMatchId = null;
+      state.pendingPartner = null;
+      state.pendingTopic = '';
     },
     clearMatched(state) {
-      state.mode             = 'browse';
+      state.mode = 'browse';
+      state.matchedMatchId = null;
       state.matchedSessionId = '';
-      state.matchedPartner   = null;
-      state.matchedTopic     = '';
+      state.matchedPartner = null;
+      state.matchedTopic = '';
     },
 
     // ── Requests (User 2) ───────────────────────────────────────────────────
@@ -131,7 +144,7 @@ const matchSlice = createSlice({
       state.requestsLoading = action.payload;
     },
     setRequests(state, action: PayloadAction<Match[]>) {
-      state.requests        = action.payload;
+      state.requests = action.payload;
       state.requestsLoading = false;
     },
     removeRequest(state, action: PayloadAction<number>) {
@@ -143,11 +156,11 @@ const matchSlice = createSlice({
       state.historyLoading = action.payload;
     },
     setHistory(state, action: PayloadAction<Match[]>) {
-      state.history        = action.payload;
+      state.history = action.payload;
       state.historyLoading = false;
     },
 
-    // ── Global notification (User 2 anywhere in app) ────────────────────────
+    // ── Global notification (User 2 via socket) ─────────────────────────────
     setNotification(state, action: PayloadAction<Match>) {
       state.notification = action.payload;
     },
@@ -170,7 +183,7 @@ const matchSlice = createSlice({
 
 export const {
   setUsersLoading, setUsers, nextCard, resetCards,
-  setWaiting, setMatched, cancelWaiting, clearMatched,
+  setWaiting, setMatched, setConfirmed, cancelWaiting, clearMatched,
   setRequestsLoading, setRequests, removeRequest,
   setHistoryLoading, setHistory,
   setNotification, clearNotification,

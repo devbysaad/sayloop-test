@@ -9,11 +9,9 @@ const matchesService = {
       throw Object.assign(new Error('Cannot match with yourself'), { status: 400 });
     }
 
-    // FIX: verify both users exist BEFORE attempting insert.
-    // Without this, Prisma throws a raw FK constraint error when either ID
-    // is missing — which happens when the frontend sends mock/stale user IDs.
+    // Verify both users exist
     const [requester, receiver] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId },    select: { id: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
       prisma.user.findUnique({ where: { id: partnerId }, select: { id: true } }),
     ]);
 
@@ -24,10 +22,10 @@ const matchesService = {
       throw Object.assign(new Error('The selected partner was not found. They may have deleted their account.'), { status: 404 });
     }
 
-    // Check for existing pending match between these users
+    // Check for existing active match between these users (PENDING or ACCEPTED)
     const existing = await prisma.match.findFirst({
       where: {
-        status: 'PENDING',
+        status: { in: ['PENDING', 'ACCEPTED'] },
         OR: [
           { requesterId: userId, receiverId: partnerId },
           { requesterId: partnerId, receiverId: userId },
@@ -36,75 +34,76 @@ const matchesService = {
     });
 
     if (existing) {
-      const age = Date.now() - existing.createdAt.getTime();
-      if (age > MATCH_TTL_MS) {
-        await prisma.match.update({ where: { id: existing.id }, data: { status: 'EXPIRED' } });
-      } else {
-        return existing;
-      }
+      // If it's still active, return it — don't create a duplicate
+      return existing;
     }
 
     const match = await prisma.match.create({
       data: { requesterId: userId, receiverId: partnerId, topic, status: 'PENDING' },
+      include: {
+        requester: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+        receiver: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+      },
     });
 
-    return {
-      matchId:   match.id,
-      partnerId: match.receiverId,
-      topic:     match.topic,
-      status:    match.status.toLowerCase(),
-    };
+    return match;
   },
 
   async acceptMatch(matchId, userId) {
-    const match = await prisma.match.findUnique({ where: { id: matchId } });
-
-    if (!match)                       throw Object.assign(new Error('Match not found'),            { status: 404 });
-    if (match.receiverId !== userId)  throw Object.assign(new Error('Not authorised'),             { status: 403 });
-    if (match.status !== 'PENDING')   throw Object.assign(new Error('Match is no longer pending'), { status: 409 });
-
-    const age = Date.now() - match.createdAt.getTime();
-    if (age > MATCH_TTL_MS) {
-      await prisma.match.update({ where: { id: matchId }, data: { status: 'EXPIRED' } });
-      throw Object.assign(new Error('Match request expired'), { status: 410 });
-    }
-
-    const sessionId = `session_${matchId}_${Date.now()}`;
-    const updated = await prisma.match.update({
-      where: { id: matchId },
-      data:  { status: 'ACCEPTED', sessionId },
+    // Atomic: only update if status is still PENDING — prevents race conditions
+    const updated = await prisma.match.updateMany({
+      where: { id: matchId, receiverId: userId, status: 'PENDING' },
+      data: { status: 'ACCEPTED', sessionId: `session_${matchId}_${Date.now()}` },
     });
 
-    return {
-      matchId:     updated.id,
-      sessionId:   updated.sessionId,
-      topic:       updated.topic,
-      requesterId: updated.requesterId,
-      receiverId:  updated.receiverId,
-    };
+    if (updated.count === 0) {
+      // Figure out why it failed for a better error message
+      const match = await prisma.match.findUnique({ where: { id: matchId } });
+      if (!match) throw Object.assign(new Error('Match not found'), { status: 404 });
+      if (match.receiverId !== userId) throw Object.assign(new Error('Not authorised'), { status: 403 });
+      if (match.status !== 'PENDING') throw Object.assign(new Error('Match is no longer pending'), { status: 409 });
+      throw Object.assign(new Error('Failed to accept match'), { status: 500 });
+    }
+
+    // Fetch the full updated match with relations
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        requester: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+        receiver: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+      },
+    });
+
+    return match;
   },
 
   async rejectMatch(matchId, userId) {
-    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    const updated = await prisma.match.updateMany({
+      where: { id: matchId, receiverId: userId, status: 'PENDING' },
+      data: { status: 'REJECTED' },
+    });
 
-    if (!match)                       throw Object.assign(new Error('Match not found'),            { status: 404 });
-    if (match.receiverId !== userId)  throw Object.assign(new Error('Not authorised'),             { status: 403 });
-    if (match.status !== 'PENDING')   throw Object.assign(new Error('Match is no longer pending'), { status: 409 });
+    if (updated.count === 0) {
+      const match = await prisma.match.findUnique({ where: { id: matchId } });
+      if (!match) throw Object.assign(new Error('Match not found'), { status: 404 });
+      if (match.receiverId !== userId) throw Object.assign(new Error('Not authorised'), { status: 403 });
+      if (match.status !== 'PENDING') throw Object.assign(new Error('Match is no longer pending'), { status: 409 });
+      throw Object.assign(new Error('Failed to reject match'), { status: 500 });
+    }
 
-    await prisma.match.update({ where: { id: matchId }, data: { status: 'REJECTED' } });
     return { matchId, status: 'rejected' };
   },
 
   async getActiveMatches(userId) {
     const matches = await prisma.match.findMany({
       where: {
-        status: { in: ['PENDING', 'ACCEPTED'] },
+        status: { in: ['PENDING', 'ACCEPTED', 'CONFIRMED'] },
         OR: [{ requesterId: userId }, { receiverId: userId }],
       },
       orderBy: { createdAt: 'desc' },
       include: {
         requester: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
-        receiver:  { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+        receiver: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
       },
     });
 
@@ -112,9 +111,9 @@ const matchesService = {
   },
 
   async getMatchHistory(userId, page = 0, limit = 20) {
-    const skip  = page * limit;
+    const skip = page * limit;
     const where = {
-      status: { in: ['COMPLETED', 'REJECTED', 'EXPIRED'] },
+      status: { in: ['COMPLETED', 'REJECTED', 'EXPIRED', 'ABANDONED'] },
       OR: [{ requesterId: userId }, { receiverId: userId }],
     };
 
@@ -123,17 +122,17 @@ const matchesService = {
       prisma.match.findMany({
         where,
         skip,
-        take:    limit,
+        take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
           requester: { select: { id: true, username: true, firstName: true, pfpSource: true } },
-          receiver:  { select: { id: true, username: true, firstName: true, pfpSource: true } },
+          receiver: { select: { id: true, username: true, firstName: true, pfpSource: true } },
         },
       }),
     ]);
 
     return {
-      data:       matches.map(m => ({ ...m, status: m.status.toLowerCase() })),
+      data: matches.map(m => ({ ...m, status: m.status.toLowerCase() })),
       total,
       page,
       limit,
@@ -142,7 +141,9 @@ const matchesService = {
   },
 
   async completeMatch(sessionId) {
-    const match = await prisma.match.findFirst({ where: { sessionId, status: 'ACCEPTED' } });
+    const match = await prisma.match.findFirst({
+      where: { sessionId, status: { in: ['ACCEPTED', 'CONFIRMED', 'IN_SESSION'] } },
+    });
     if (!match) return null;
     return prisma.match.update({ where: { id: match.id }, data: { status: 'COMPLETED' } });
   },
