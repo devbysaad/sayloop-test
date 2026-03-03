@@ -1,57 +1,36 @@
 import React, { useState } from 'react';
 import UserAvatar from './UserAvatar';
 import MatchFoundModal from './MatchFoundModal';
-import { acceptMatch, rejectMatch, type Match, type MatchUser } from '../../../lib/matchApi';
+import type { Match, MatchUser } from '../../../lib/matchApi';
 
 interface Props {
   requests: Match[];
   loading: boolean;
   myUserId: number;
-  onUpdate: (matchId: number) => void;
-  onToast: (msg: string, type?: 'success' | 'error') => void;
+  onAccept: (match: Match) => void;
+  onReject: (matchId: number) => void;
   onStartSession: (sessionId: string) => void;
 }
 
 const TOPIC_EMOJI: Record<string, string> = {
-  daily_life:'☀️', travel:'✈️', food:'🍜', movies:'🎬', tech:'💻',
-  sports:'⚽', books:'📚', science:'🔬', business:'💼', art:'🎨', gaming:'🎮', health:'🏃',
+  daily_life: '☀️', travel: '✈️', food: '🍜', movies: '🎬', tech: '💻',
+  sports: '⚽', books: '📚', science: '🔬', business: '💼', art: '🎨', gaming: '🎮', health: '🏃',
 };
 
 const IncomingRequests: React.FC<Props> = ({
-  requests, loading, onUpdate, onToast, onStartSession,
+  requests, loading, myUserId, onAccept, onReject, onStartSession,
 }) => {
   // When this user accepts, show the modal before navigating
   const [acceptedMatch, setAcceptedMatch] = useState<{
     sessionId: string; partner: MatchUser; topic: string;
   } | null>(null);
 
-  const handleAccept = async (match: Match) => {
-    try {
-      const result = await acceptMatch(match.id);
-      onUpdate(match.id);
-      if (result?.sessionId) {
-        // Show the "Match Found" modal — auto-navigates after countdown
-        setAcceptedMatch({
-          sessionId: result.sessionId,
-          partner:   match.requester as MatchUser,
-          topic:     match.topic,
-        });
-      } else {
-        onStartSession('');
-      }
-    } catch (err: any) {
-      onToast(err?.response?.data?.message ?? 'Failed to accept', 'error');
-    }
+  const handleAccept = (match: Match) => {
+    onAccept(match);
   };
 
-  const handleReject = async (matchId: number) => {
-    try {
-      await rejectMatch(matchId);
-      onToast('Request declined.');
-      onUpdate(matchId);
-    } catch (err: any) {
-      onToast(err?.response?.data?.message ?? 'Failed to reject', 'error');
-    }
+  const handleReject = (matchId: number) => {
+    onReject(matchId);
   };
 
   if (loading) return (

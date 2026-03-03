@@ -1,19 +1,19 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthenticateWithRedirectCallback, useUser } from '@clerk/clerk-react';
 
-import Marketing       from '../../page/LandingPages/Marketing';
-import SignInPage      from '../modules/auth/SignIn';
-import SignUpPage      from '../modules/auth/SignUp';
-import OnboardingPage  from '../modules/auth/OnBoardingPage';
-import HomePage        from '../../page/Home/Home';
-import Learn           from '../../page/Home/Learn';
-import ProfilePage     from '../../page/Home/Profile';
+import Marketing from '../../page/LandingPages/Marketing';
+import SignInPage from '../modules/auth/SignIn';
+import SignUpPage from '../modules/auth/SignUp';
+import OnboardingPage from '../modules/auth/OnBoardingPage';
+import HomePage from '../../page/Home/Home';
+import Learn from '../../page/Home/Learn';
+import ProfilePage from '../../page/Home/Profile';
 import LeaderboardPage from '../../page/Home/LeaderBoard';
-import QuestPage       from '../../page/Home/Quest';
-import MorePage        from '../../page/Home/More';
-import ShopPage        from '../../page/Home/ShopPage';
-import SessionPage     from '../../page/Session/Session';
-import MatchPage       from '../../page/Match/Match';
+import QuestPage from '../../page/Home/Quest';
+import MorePage from '../../page/Home/More';
+import ShopPage from '../../page/Home/ShopPage';
+import SessionPage from '../../page/Session/Session';
+import MatchPage from '../../page/Match/Match';
 
 import MatchFoundModal from '../modules/match/MatchFoundModal';
 import { useMatchNotification } from '../../hooks/UserMatchNotification';
@@ -39,29 +39,31 @@ const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 // ── Global match watcher ──────────────────────────────────────────────────────
-// Polls every 5s app-wide so User 2 sees the MatchFoundModal
-// no matter which page they're currently on.
+// Polls app-wide so the receiver sees the MatchFoundModal
+// no matter which page they're on (except /session — that page has its own flow).
 
 function GlobalMatchWatcher() {
-  const navigate   = useNavigate();
-  const myUserId   = (() => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const myUserId = (() => {
     const v = localStorage.getItem('db_user_id');
     return v ? parseInt(v, 10) : null;
   })();
 
   const { acceptedMatch, clearAccepted } = useMatchNotification(myUserId);
 
-  if (!acceptedMatch) return null;
+  // Don't show the modal if user is already in a session
+  if (!acceptedMatch || location.pathname === '/session') return null;
 
   const partner: MatchUser = {
-    id:               acceptedMatch.requester.id,
-    firstName:        acceptedMatch.requester.firstName ?? 'Partner',
-    username:         acceptedMatch.requester.username  ?? '',
-    pfpSource:        acceptedMatch.requester.pfpSource ?? null,
-    points:           0,
+    id: acceptedMatch.requester.id,
+    firstName: acceptedMatch.requester.firstName ?? 'Partner',
+    username: acceptedMatch.requester.username ?? '',
+    pfpSource: acceptedMatch.requester.pfpSource ?? null,
+    points: 0,
     learningLanguage: '',
-    interests:        [],
-    streakLength:     0,
+    interests: [],
+    streakLength: 0,
   };
 
   const handleStart = () => {
@@ -70,9 +72,13 @@ function GlobalMatchWatcher() {
       state: {
         sessionId: acceptedMatch.sessionId,
         partnerId: acceptedMatch.requesterId,
-        topic:     acceptedMatch.topic,
+        topic: acceptedMatch.topic,
       },
     });
+  };
+
+  const handleCancel = () => {
+    clearAccepted();
   };
 
   return (
@@ -81,6 +87,7 @@ function GlobalMatchWatcher() {
       topic={acceptedMatch.topic}
       sessionId={acceptedMatch.sessionId ?? ''}
       onStart={handleStart}
+      onCancel={handleCancel}
     />
   );
 }
@@ -94,7 +101,7 @@ const AppRoutes = () => (
 
     <Routes>
       {/* Public */}
-      <Route path="/"          element={<Marketing />} />
+      <Route path="/" element={<Marketing />} />
       <Route path="/sign-in/*" element={<SignInPage />} />
       <Route path="/sign-up/*" element={<SignUpPage />} />
 
@@ -129,15 +136,15 @@ const AppRoutes = () => (
       />
 
       {/* Protected app pages */}
-      <Route path="/home"        element={<OnboardingGuard><HomePage /></OnboardingGuard>} />
-      <Route path="/learn"       element={<OnboardingGuard><Learn /></OnboardingGuard>} />
+      <Route path="/home" element={<OnboardingGuard><HomePage /></OnboardingGuard>} />
+      <Route path="/learn" element={<OnboardingGuard><Learn /></OnboardingGuard>} />
       <Route path="/leaderboard" element={<OnboardingGuard><LeaderboardPage /></OnboardingGuard>} />
-      <Route path="/quests"      element={<OnboardingGuard><QuestPage /></OnboardingGuard>} />
-      <Route path="/more"        element={<OnboardingGuard><MorePage /></OnboardingGuard>} />
-      <Route path="/shop"        element={<OnboardingGuard><ShopPage /></OnboardingGuard>} />
-      <Route path="/profile"     element={<OnboardingGuard><ProfilePage /></OnboardingGuard>} />
-      <Route path="/session"     element={<OnboardingGuard><SessionPage /></OnboardingGuard>} />
-      <Route path="/match"       element={<OnboardingGuard><MatchPage /></OnboardingGuard>} />
+      <Route path="/quests" element={<OnboardingGuard><QuestPage /></OnboardingGuard>} />
+      <Route path="/more" element={<OnboardingGuard><MorePage /></OnboardingGuard>} />
+      <Route path="/shop" element={<OnboardingGuard><ShopPage /></OnboardingGuard>} />
+      <Route path="/profile" element={<OnboardingGuard><ProfilePage /></OnboardingGuard>} />
+      <Route path="/session" element={<OnboardingGuard><SessionPage /></OnboardingGuard>} />
+      <Route path="/match" element={<OnboardingGuard><MatchPage /></OnboardingGuard>} />
     </Routes>
   </>
 );

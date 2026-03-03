@@ -7,9 +7,10 @@ interface Props {
   topic: string;
   sessionId: string;
   onStart: () => void;   // navigate to session
+  onCancel?: () => void; // dismiss the modal
 }
 
-const MatchFoundModal: React.FC<Props> = ({ partner, topic, onStart }) => {
+const MatchFoundModal: React.FC<Props> = ({ partner, topic, onStart, onCancel }) => {
   const [countdown, setCountdown] = useState(5);
 
   // Auto-start after 5 seconds
@@ -20,8 +21,8 @@ const MatchFoundModal: React.FC<Props> = ({ partner, topic, onStart }) => {
   }, [countdown, onStart]);
 
   const TOPIC_EMOJI: Record<string, string> = {
-    daily_life:'☀️', travel:'✈️', food:'🍜', movies:'🎬', tech:'💻',
-    sports:'⚽', books:'📚', science:'🔬', business:'💼', art:'🎨', gaming:'🎮', health:'🏃',
+    daily_life: '☀️', travel: '✈️', food: '🍜', movies: '🎬', tech: '💻',
+    sports: '⚽', books: '📚', science: '🔬', business: '💼', art: '🎨', gaming: '🎮', health: '🏃',
   };
 
   // circumference for SVG countdown ring
@@ -94,6 +95,17 @@ const MatchFoundModal: React.FC<Props> = ({ partner, topic, onStart }) => {
           <p className="text-center text-gray-400 text-xs font-semibold mt-3">
             Starting automatically in {countdown} second{countdown !== 1 ? 's' : ''}
           </p>
+
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="w-full mt-3 py-3 rounded-2xl border-2 border-gray-200 text-gray-500
+                font-bold text-sm hover:border-red-300 hover:text-red-500 hover:bg-red-50
+                transition-all active:scale-95"
+            >
+              ✕ Cancel
+            </button>
+          )}
         </div>
       </div>
 

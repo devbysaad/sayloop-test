@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions } from '../../redux/saga/session.saga';
@@ -7,16 +7,17 @@ import SessionScreen from '../../components/modules/sessions/sessionScreen/index
 import ResultScreen from '../../components/modules/sessions/ResultScreen';
 
 const DebatePage = () => {
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { status } = useSelector((s: any) => s.session);
+  const hasStarted = useRef(false);
 
   // State passed from MatchPage / GlobalMatchWatcher after a match is accepted
   const locationState = location.state as {
     sessionId?: string;
     partnerId?: number;
-    topic?:     string;
+    topic?: string;
   } | null;
 
   const [dbUserId, setDbUserId] = useState<number | null>(() => {
@@ -48,15 +49,27 @@ const DebatePage = () => {
       return;
     }
 
-    if (status === 'idle') {
+    if (status === 'idle' && !hasStarted.current) {
+      hasStarted.current = true;
       dispatch(sessionActions.findPartner({
+        userId: dbUserId,
+        topic: locationState.topic ?? '',
+      }));
     }
   }, [dbUserId]); // run once when userId is ready
+
+  // If session returns to idle after it was started (user cancelled / reset),
+  // redirect back to /match instead of showing a blank page.
+  useEffect(() => {
+    if (hasStarted.current && status === 'idle') {
+      navigate('/match', { replace: true });
+    }
+  }, [status, navigate]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      redispatch(sessionActions.leaveSession());
+      dispatch(sessionActions.leaveSession());
     };
   }, [dispatch]);
 

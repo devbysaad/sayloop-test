@@ -73,7 +73,7 @@ export const useAuthInit = () => {
 
         // Retry on transient failures (network, 5xx) but not on permanent ones (400)
         const status = (err as any)?.response?.status;
-        const isTransient = !status || status >= 500;
+        const isTransient = !status || status >= 500 || status === 429;
         if (isTransient && retryCountRef.current < MAX_RETRIES && !cancelled) {
           retryCountRef.current += 1;
           console.warn(

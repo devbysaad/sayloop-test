@@ -3,19 +3,19 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { matchActions } from '../../redux/saga/match.saga';
 import { clearMatched, clearToast } from '../../redux/slice/match.slice';
-import SwipeCard    from '../../components/modules/match/SwipeCard';
+import SwipeCard from '../../components/modules/match/SwipeCard';
 import WaitingScreen from '../../components/modules/match/WaitingScreen';
 import MatchFoundModal from '../../components/modules/match/MatchFoundModal';
 import IncomingRequests from '../../components/modules/match/IncomingRequest';
 import MatchHistory from '../../components/modules/match/MatchHistory';
-import Toast        from '../../components/modules/match/Toast';
+import Toast from '../../components/modules/match/Toast';
 
 type Tab = 'browse' | 'requests' | 'history';
 
 const MatchPage = () => {
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
-  const myUserId  = parseInt(localStorage.getItem('db_user_id') ?? '0', 10);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const myUserId = parseInt(localStorage.getItem('db_user_id') ?? '0', 10);
 
   const {
     users, usersLoading, cardIdx,
@@ -26,7 +26,7 @@ const MatchPage = () => {
     toast,
   } = useSelector((s: any) => s.match);
 
-  const [tab, setTab]   = useState<Tab>('browse');
+  const [tab, setTab] = useState<Tab>('browse');
   const [topic, setTopic] = useState('');
 
   // Load users on mount
@@ -37,7 +37,7 @@ const MatchPage = () => {
   // Load requests / history when tab switches
   useEffect(() => {
     if (tab === 'requests') dispatch(matchActions.loadRequests({ userId: myUserId }));
-    if (tab === 'history')  dispatch(matchActions.loadHistory ({ userId: myUserId }));
+    if (tab === 'history') dispatch(matchActions.loadHistory({ userId: myUserId }));
   }, [tab]);
 
   const handleSend = () => {
@@ -60,13 +60,13 @@ const MatchPage = () => {
     });
   };
 
-  const currentUser  = users[cardIdx] ?? null;
+  const currentUser = users[cardIdx] ?? null;
   const pendingCount = requests.length;
 
   const TABS: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'browse',   label: '🔍 Browse'   },
+    { id: 'browse', label: '🔍 Browse' },
     { id: 'requests', label: '📩 Requests', badge: pendingCount },
-    { id: 'history',  label: '📜 History'  },
+    { id: 'history', label: '📜 History' },
   ];
 
   // ── Waiting screen (full-page) ──────────────────────────────────────────────
@@ -93,6 +93,7 @@ const MatchPage = () => {
           topic={matchedTopic}
           sessionId={matchedSessionId}
           onStart={() => goToSession(matchedSessionId)}
+          onCancel={() => dispatch(clearMatched())}
         />
       )}
 
