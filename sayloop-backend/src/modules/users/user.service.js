@@ -43,16 +43,38 @@ const getMyProfile = async (userId) => {
 
 // ─── Update profile (including onboarding fields) ─────────────────────────────
 const updateProfile = async (userId, { username, firstName, lastName, pfpSource, learningLanguage, interests }) => {
-  // Build update object — only include defined fields so we don't null out existing ones
   const data = {};
   if (username         !== undefined) data.username         = username;
   if (firstName        !== undefined) data.firstName        = firstName;
   if (lastName         !== undefined) data.lastName         = lastName;
   if (pfpSource        !== undefined) data.pfpSource        = pfpSource;
   if (learningLanguage !== undefined) data.learningLanguage = learningLanguage;
-  if (interests        !== undefined) data.interests        = interests; // stored as JSON array
+  if (interests        !== undefined) data.interests        = interests;
 
   return prisma.user.update({ where: { id: userId }, data });
+};
+
+// ─── Browse users (for match page) ───────────────────────────────────────────
+// Returns all users except the caller, ordered by points descending.
+const getBrowseUsers = async (excludeUserId) => {
+  return prisma.user.findMany({
+    where: {
+      id:        { not: excludeUserId },
+      firstName: { not: null },           // skip incomplete/unfinished accounts
+    },
+    select: {
+      id:               true,
+      firstName:        true,
+      username:         true,
+      pfpSource:        true,
+      points:           true,
+      streakLength:     true,
+      learningLanguage: true,
+      interests:        true,
+    },
+    orderBy: { points: 'desc' },
+    take: 50,
+  });
 };
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
@@ -96,9 +118,8 @@ const updateStreak = async (userId) => {
   const diffHours = lastSub ? (now - lastSub) / (1000 * 60 * 60) : null;
 
   let newStreak = user.streakLength;
-  if (!lastSub || diffHours >= 48) newStreak = 1;           // reset
-  else if (diffHours >= 24)        newStreak += 1;           // increment
-  // diffHours < 24 → same day, no change
+  if (!lastSub || diffHours >= 48) newStreak = 1;
+  else if (diffHours >= 24)        newStreak += 1;
 
   return prisma.user.update({
     where: { id: userId },
@@ -108,6 +129,6 @@ const updateStreak = async (userId) => {
 
 module.exports = {
   syncUser, getUserByClerkId, getUserById,
-  getMyProfile, updateProfile, getUserStats,
-  addPoints, updateStreak,
+  getMyProfile, updateProfile, getBrowseUsers,
+  getUserStats, addPoints, updateStreak,
 };

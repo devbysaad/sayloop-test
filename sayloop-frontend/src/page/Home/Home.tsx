@@ -42,7 +42,7 @@ const HomePage = () => {
           ))}
         </div>
 
-        <Link to="/session">
+        <Link to="/match">
           <button className="bg-linear-to-br from-[#fbbf24] to-[#f97316] text-white font-[800] text-[14px] px-7 py-3 rounded-[14px] border-none cursor-pointer font-sans shadow-[0_8px_22px_rgba(251,191,36,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(251,191,36,0.55)] active:scale-95">
             Find Partner 🚀
           </button>

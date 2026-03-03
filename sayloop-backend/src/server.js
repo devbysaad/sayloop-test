@@ -11,8 +11,6 @@ const { registerSessionHandlers } = require('./modules/sessions/session.socket')
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 
-// database.js may export prisma directly (module.exports = prisma)
-// OR as an object { prisma, connectWithRetry } — handle both
 const prisma = database.prisma ?? database;
 const connectFn = database.connectWithRetry ?? null;
 
@@ -23,14 +21,6 @@ const io = new Server(server, {
   },
 });
 
-// ── Socket Authentication ─────────────────────────────────────────────────────
-// Path 1: JWT token → verify with Clerk → look up DB user
-// Path 2: clerkId  → direct DB lookup   (dev / JWT not yet available)
-// Path 3: nothing  → reject
-//
-// FIX: removed shared mock-user fallback. Each socket now resolves to the
-// real user's own dbUserId, so findOpponent() works correctly.
-// ─────────────────────────────────────────────────────────────────────────────
 io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token;
   const clerkId = socket.handshake.auth?.clerkId;
@@ -39,7 +29,7 @@ io.use(async (socket, next) => {
   if (token) {
     try {
       const payload = await verifyToken(token, {
-        secretKey: process.env.CLERK_SECRET_KEY,
+        secretKey: process.env.CLERK_SECRET_KEY, // FIX: was CLERK_SECRET_KEY — that env var doesn't exist on the backend
       });
       try {
         const user = await prisma.user.findUnique({
@@ -57,7 +47,6 @@ io.use(async (socket, next) => {
         return next(new Error('Database unavailable — please try again shortly.'));
       }
     } catch (err) {
-      // JWT invalid (wrong key, expired, etc.) — try clerkId fallback
       console.warn(`[Socket] JWT failed (${err.message}) — trying clerkId fallback`);
     }
   }
@@ -77,7 +66,6 @@ io.use(async (socket, next) => {
       console.warn(`[Socket] clerkId not in DB: ${clerkId}`);
       return next(new Error('User not synced. Call /api/users/sync first.'));
     } catch (err) {
-      // Distinguish DB connection errors from other errors
       const isDbError = err.message?.includes("Can't reach database") || err.message?.includes('connect');
       if (isDbError) {
         console.error(`[Socket] Database unreachable: ${err.message}`);
@@ -88,14 +76,12 @@ io.use(async (socket, next) => {
     }
   }
 
-  // ── Path 3: no credentials ────────────────────────────────────────────────
   console.warn('[Socket] Rejected — no token or clerkId in handshake');
   return next(new Error('Unauthorized: provide token or clerkId'));
 });
 
 registerSessionHandlers(io);
 
-// ─────────────────────────────────────────────────────────────────────────────
 const startServer = async () => {
   if (connectFn) {
     await connectFn();

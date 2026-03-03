@@ -1,11 +1,11 @@
 import React from 'react';
-import Navbar          from '../../components/modules/LandingPage/Navbar';
-import Hero            from '../../components/modules/LandingPage/Hero';
-import Stats           from '../../components/modules/LandingPage/Stats';
-import HowItWorks      from '../../components/modules/LandingPage/HowItWorks';
-import LanguageCarousel from '../../components/modules/LandingPage/LanguageCarousel';
-import CTA             from '../../components/modules/LandingPage/CTA';
-import Footer          from '../../components/modules/LandingPage/Footer';
+import Navbar          from '../../components/modules/landing/Navbar';
+import Hero            from '../../components/modules/landing/Hero';
+import Stats           from '../../components/modules/landing/Stats';
+import HowItWorks      from '../../components/modules/landing/HowItWorks';
+import LanguageCarousel from '../../components/modules/landing/LanguageCarousel';
+import CTA             from '../../components/modules/landing/CTA';
+import Footer          from '../../components/modules/landing/Footer';
 
 const LandingPage = () => (
   <div style={{ background: '#fffbf5' }}>

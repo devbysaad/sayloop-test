@@ -13,23 +13,31 @@ router.post('/sync',
   controller.syncUser,
 );
 
-// GET  /api/users/me
+// GET /api/users/me
 router.get('/me',
   protect,
   controller.getMe,
 );
 
-// PUT  /api/users/me — also called after onboarding to save language + interests
+// PUT /api/users/me
 router.put('/me',
   protect,
   validate(updateProfileSchema),
   controller.updateMe,
 );
 
-// GET  /api/users/me/stats
+// GET /api/users/me/stats
 router.get('/me/stats',
   protect,
   controller.getMyStats,
+);
+
+// GET /api/users/browse
+// Returns other real users for the match browse tab.
+// Must come BEFORE any /:id route to avoid being caught as a param.
+router.get('/browse',
+  protect,
+  controller.browseUsers,
 );
 
 module.exports = router;

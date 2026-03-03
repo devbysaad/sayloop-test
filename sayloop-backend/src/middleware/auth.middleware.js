@@ -1,12 +1,13 @@
 const { ClerkExpressWithAuth } = require('@clerk/clerk-sdk-node');
 const prisma = require('../config/database');
 
-// ─── Step 1: Clerk token verification ────────────────────────────────────────
-// Populates req.auth = { userId, sessionId, ... } from the Bearer token.
-// Does NOT reject unauthenticated requests by itself — use with resolveDbUser.
-const clerkAuth = ClerkExpressWithAuth();
+// FIX: Pass secretKey explicitly. Without it, some versions of the Clerk SDK
+// do NOT automatically read CLERK_SECRET_KEY from process.env when called
+// as ClerkExpressWithAuth() — req.auth.userId silently comes back null.
+const clerkAuth = ClerkExpressWithAuth({
+  secretKey: process.env.CLERK_SECRET_KEY,
+});
 
-// ─── Debug wrapper: logs exactly what ClerkExpressWithAuth does ──────────────
 const clerkAuthWithDebug = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const hasToken = !!(authHeader && authHeader.startsWith('Bearer '));
@@ -24,7 +25,6 @@ const clerkAuthWithDebug = (req, res, next) => {
   }
   console.log('[auth-debug] CLERK_SECRET_KEY prefix:', secretKeyPrefix);
 
-  // Run the real ClerkExpressWithAuth middleware
   clerkAuth(req, res, (err) => {
     if (err) {
       console.error('[auth-debug] ClerkExpressWithAuth ERROR:', err.message || err);
@@ -37,9 +37,6 @@ const clerkAuthWithDebug = (req, res, next) => {
   });
 };
 
-// ─── Step 2: Resolve DB user from clerkId ────────────────────────────────────
-// Requires clerkAuth to have run first (req.auth.userId must be set).
-// Sets req.dbUserId = the internal Postgres user.id for use in controllers.
 const resolveDbUser = async (req, res, next) => {
   try {
     const clerkId = req.auth?.userId;
@@ -55,8 +52,6 @@ const resolveDbUser = async (req, res, next) => {
     });
 
     if (!user) {
-      // User is authenticated with Clerk but hasn't called /api/users/sync yet.
-      // This can happen if the frontend sends a request before useAuthInit completes.
       return res.status(401).json({
         success: false,
         message: 'User not synced. Call POST /api/users/sync first.',
@@ -71,24 +66,9 @@ const resolveDbUser = async (req, res, next) => {
   }
 };
 
-// ─── Combined middleware stacks ───────────────────────────────────────────────
-
-/**
- * protect / requireAuth
- * Full auth: verify Clerk token + resolve DB user.
- * Use on all protected routes. Sets req.dbUserId.
- *
- * Usage:
- *   router.get('/me', protect, controller.getMe)
- */
 const protect = [clerkAuthWithDebug, resolveDbUser];
-const requireAuth = protect; // alias — use whichever you prefer
+const requireAuth = protect;
 
-/**
- * adminOnly
- * Placeholder until an admin role is added to the User model.
- * Currently blocks all requests with 501.
- */
 const adminOnly = (req, res, _next) => {
   return res.status(501).json({
     success: false,

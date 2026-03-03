@@ -1,95 +1,145 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthenticateWithRedirectCallback, useUser } from '@clerk/clerk-react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { AuthenticateWithRedirectCallback, useUser } from '@clerk/clerk-react';
 
-import Marketing      from '../../page/LandingPages/Marketing'
-import SignInPage     from '../modules/auth/SignIn'
-import SignUpPage     from '../modules/auth/SignUp'
-import OnboardingPage from '../modules/auth/OnBoardingPage'
-import HomePage       from '../../page/Home/Home'
-import Learn          from '../../page/Home/Learn'
-import ProfilePage    from '../../page/Home/Profile'
-import LeaderboardPage from '../../page/Home/LeaderBoard'
-import QuestPage      from '../../page/Home/Quest'
-import MorePage       from '../../page/Home/More'
-import ShopPage       from '../../page/Home/ShopPage'
-import SessionPage    from '../../page/Session/Session'
+import Marketing       from '../../page/LandingPages/Marketing';
+import SignInPage      from '../modules/auth/SignIn';
+import SignUpPage      from '../modules/auth/SignUp';
+import OnboardingPage  from '../modules/auth/OnBoardingPage';
+import HomePage        from '../../page/Home/Home';
+import Learn           from '../../page/Home/Learn';
+import ProfilePage     from '../../page/Home/Profile';
+import LeaderboardPage from '../../page/Home/LeaderBoard';
+import QuestPage       from '../../page/Home/Quest';
+import MorePage        from '../../page/Home/More';
+import ShopPage        from '../../page/Home/ShopPage';
+import SessionPage     from '../../page/Session/Session';
+import MatchPage       from '../../page/Match/Match';
+
+import MatchFoundModal from '../modules/match/MatchFoundModal';
+import { useMatchNotification } from '../../hooks/UserMatchNotification';
+import type { MatchUser } from '../../lib/matchApi';
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 
-/** Requires login. Redirects to /sign-in if not authenticated. */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isLoaded, isSignedIn } = useUser()
-  if (!isLoaded) return null
-  if (!isSignedIn) return <Navigate to="/sign-in" replace />
-  return <>{children}</>
-}
+  const { isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Navigate to="/sign-in" replace />;
+  return <>{children}</>;
+};
 
-/**
- * Requires login + completed onboarding.
- * New users (onboardingComplete !== true) are redirected to /onboarding.
- */
 const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
-  const { isLoaded, isSignedIn, user } = useUser()
-  if (!isLoaded) return null
-  if (!isSignedIn) return <Navigate to="/sign-in" replace />
+  const { isLoaded, isSignedIn, user } = useUser();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Navigate to="/sign-in" replace />;
   if (!user?.unsafeMetadata?.onboardingComplete) {
-    return <Navigate to="/onboarding" replace />
+    return <Navigate to="/onboarding" replace />;
   }
-  return <>{children}</>
+  return <>{children}</>;
+};
+
+// ── Global match watcher ──────────────────────────────────────────────────────
+// Polls every 5s app-wide so User 2 sees the MatchFoundModal
+// no matter which page they're currently on.
+
+function GlobalMatchWatcher() {
+  const navigate   = useNavigate();
+  const myUserId   = (() => {
+    const v = localStorage.getItem('db_user_id');
+    return v ? parseInt(v, 10) : null;
+  })();
+
+  const { acceptedMatch, clearAccepted } = useMatchNotification(myUserId);
+
+  if (!acceptedMatch) return null;
+
+  const partner: MatchUser = {
+    id:               acceptedMatch.requester.id,
+    firstName:        acceptedMatch.requester.firstName ?? 'Partner',
+    username:         acceptedMatch.requester.username  ?? '',
+    pfpSource:        acceptedMatch.requester.pfpSource ?? null,
+    points:           0,
+    learningLanguage: '',
+    interests:        [],
+    streakLength:     0,
+  };
+
+  const handleStart = () => {
+    clearAccepted();
+    navigate('/session', {
+      state: {
+        sessionId: acceptedMatch.sessionId,
+        partnerId: acceptedMatch.requesterId,
+        topic:     acceptedMatch.topic,
+      },
+    });
+  };
+
+  return (
+    <MatchFoundModal
+      partner={partner}
+      topic={acceptedMatch.topic}
+      sessionId={acceptedMatch.sessionId ?? ''}
+      onStart={handleStart}
+    />
+  );
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const AppRoutes = () => (
-  <Routes>
-    {/* Public */}
-    <Route path="/"         element={<Marketing />} />
-    <Route path="/sign-in/*" element={<SignInPage />} />
-    <Route path="/sign-up/*" element={<SignUpPage />} />
+  <>
+    {/* Runs globally — shows MatchFoundModal for User 2 from any page */}
+    <GlobalMatchWatcher />
 
-    {/*
-      SSO Callbacks — Clerk redirects here after Google OAuth.
-      Always go to /home. OnboardingGuard handles new vs returning users.
-    */}
-    <Route
-      path="/sign-in/sso-callback"
-      element={
-        <AuthenticateWithRedirectCallback
-          signInFallbackRedirectUrl="/home"
-          signUpFallbackRedirectUrl="/home"
-        />
-      }
-    />
-    <Route
-      path="/sign-up/sso-callback"
-      element={
-        <AuthenticateWithRedirectCallback
-          signInFallbackRedirectUrl="/home"
-          signUpFallbackRedirectUrl="/home"
-        />
-      }
-    />
+    <Routes>
+      {/* Public */}
+      <Route path="/"          element={<Marketing />} />
+      <Route path="/sign-in/*" element={<SignInPage />} />
+      <Route path="/sign-up/*" element={<SignUpPage />} />
 
-    {/* Onboarding — login required, onboarding NOT yet required */}
-    <Route
-      path="/onboarding"
-      element={
-        <ProtectedRoute>
-          <OnboardingPage />
-        </ProtectedRoute>
-      }
-    />
+      {/* SSO callbacks */}
+      <Route
+        path="/sign-in/sso-callback"
+        element={
+          <AuthenticateWithRedirectCallback
+            signInFallbackRedirectUrl="/home"
+            signUpFallbackRedirectUrl="/home"
+          />
+        }
+      />
+      <Route
+        path="/sign-up/sso-callback"
+        element={
+          <AuthenticateWithRedirectCallback
+            signInFallbackRedirectUrl="/home"
+            signUpFallbackRedirectUrl="/home"
+          />
+        }
+      />
 
-    {/* App pages — login + completed onboarding required */}
-    <Route path="/home"        element={<OnboardingGuard><HomePage /></OnboardingGuard>} />
-    <Route path="/learn"       element={<OnboardingGuard><Learn /></OnboardingGuard>} />
-    <Route path="/leaderboard" element={<OnboardingGuard><LeaderboardPage /></OnboardingGuard>} />
-    <Route path="/quests"      element={<OnboardingGuard><QuestPage /></OnboardingGuard>} />
-    <Route path="/more"        element={<OnboardingGuard><MorePage /></OnboardingGuard>} />
-    <Route path="/shop"        element={<OnboardingGuard><ShopPage /></OnboardingGuard>} />
-    <Route path="/profile"     element={<OnboardingGuard><ProfilePage /></OnboardingGuard>} />
-    <Route path="/session"     element={<OnboardingGuard><SessionPage /></OnboardingGuard>} />
-  </Routes>
-)
+      {/* Onboarding */}
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <OnboardingPage />
+          </ProtectedRoute>
+        }
+      />
 
-export default AppRoutes
+      {/* Protected app pages */}
+      <Route path="/home"        element={<OnboardingGuard><HomePage /></OnboardingGuard>} />
+      <Route path="/learn"       element={<OnboardingGuard><Learn /></OnboardingGuard>} />
+      <Route path="/leaderboard" element={<OnboardingGuard><LeaderboardPage /></OnboardingGuard>} />
+      <Route path="/quests"      element={<OnboardingGuard><QuestPage /></OnboardingGuard>} />
+      <Route path="/more"        element={<OnboardingGuard><MorePage /></OnboardingGuard>} />
+      <Route path="/shop"        element={<OnboardingGuard><ShopPage /></OnboardingGuard>} />
+      <Route path="/profile"     element={<OnboardingGuard><ProfilePage /></OnboardingGuard>} />
+      <Route path="/session"     element={<OnboardingGuard><SessionPage /></OnboardingGuard>} />
+      <Route path="/match"       element={<OnboardingGuard><MatchPage /></OnboardingGuard>} />
+    </Routes>
+  </>
+);
+
+export default AppRoutes;

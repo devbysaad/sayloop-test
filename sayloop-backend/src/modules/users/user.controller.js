@@ -2,8 +2,6 @@ const userService = require('./user.service');
 const { success, error } = require('../../utils/response');
 
 // POST /api/users/sync
-// Called immediately after every Clerk login (before onboarding).
-// clerkId is read from the verified JWT only — never from the request body.
 const syncUser = async (req, res) => {
   try {
     const clerkId = req.auth?.userId;
@@ -11,7 +9,6 @@ const syncUser = async (req, res) => {
       console.warn('[syncUser] req.auth.userId is empty — Clerk token verification likely failed');
       return error(res, 'Unauthorized — no valid Clerk session', 401);
     }
-
     const { email, firstName, lastName, pfpSource } = req.body;
     if (!email) return error(res, 'email is required', 400);
 
@@ -35,7 +32,6 @@ const getMe = async (req, res) => {
 };
 
 // PUT /api/users/me
-// Also called after onboarding to persist learningLanguage + interests to DB.
 const updateMe = async (req, res) => {
   try {
     const { username, firstName, lastName, pfpSource, learningLanguage, interests } = req.body;
@@ -60,4 +56,16 @@ const getMyStats = async (req, res) => {
   }
 };
 
-module.exports = { syncUser, getMe, updateMe, getMyStats };
+// GET /api/users/browse
+// Returns other users for the match browse tab — excludes the caller automatically.
+const browseUsers = async (req, res) => {
+  try {
+    const users = await userService.getBrowseUsers(req.dbUserId);
+    return success(res, users, 'Browse users fetched');
+  } catch (err) {
+    console.error('[browseUsers]', err?.message ?? err);
+    return error(res, 'Failed to fetch users');
+  }
+};
+
+module.exports = { syncUser, getMe, updateMe, getMyStats, browseUsers };

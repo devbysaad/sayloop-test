@@ -1,0 +1,187 @@
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { matchActions } from '../../redux/saga/match.saga';
+import { clearMatched, clearToast } from '../../redux/slice/match.slice';
+import SwipeCard    from '../../components/modules/match/SwipeCard';
+import WaitingScreen from '../../components/modules/match/WaitingScreen';
+import MatchFoundModal from '../../components/modules/match/MatchFoundModal';
+import IncomingRequests from '../../components/modules/match/IncomingRequest';
+import MatchHistory from '../../components/modules/match/MatchHistory';
+import Toast        from '../../components/modules/match/Toast';
+
+type Tab = 'browse' | 'requests' | 'history';
+
+const MatchPage = () => {
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+  const myUserId  = parseInt(localStorage.getItem('db_user_id') ?? '0', 10);
+
+  const {
+    users, usersLoading, cardIdx,
+    mode, pendingMatchId, pendingPartner, pendingTopic,
+    matchedSessionId, matchedPartner, matchedTopic,
+    requests, requestsLoading,
+    history, historyLoading,
+    toast,
+  } = useSelector((s: any) => s.match);
+
+  const [tab, setTab]   = useState<Tab>('browse');
+  const [topic, setTopic] = useState('');
+
+  // Load users on mount
+  useEffect(() => {
+    dispatch(matchActions.loadUsers({ userId: myUserId }));
+  }, [myUserId]);
+
+  // Load requests / history when tab switches
+  useEffect(() => {
+    if (tab === 'requests') dispatch(matchActions.loadRequests({ userId: myUserId }));
+    if (tab === 'history')  dispatch(matchActions.loadHistory ({ userId: myUserId }));
+  }, [tab]);
+
+  const handleSend = () => {
+    const partner = users[cardIdx];
+    if (!topic || !partner) return;
+    dispatch(matchActions.sendRequest({ userId: myUserId, partnerId: partner.id, topic, partner }));
+    setTopic('');
+  };
+
+  const handleSkip = () => {
+    // Just advance the card — no API call needed
+    dispatch({ type: 'match/nextCard' });
+    setTopic('');
+  };
+
+  const goToSession = (sessionId: string) => {
+    dispatch(clearMatched());
+    navigate('/session', {
+      state: { sessionId, partnerId: matchedPartner?.id, topic: matchedTopic },
+    });
+  };
+
+  const currentUser  = users[cardIdx] ?? null;
+  const pendingCount = requests.length;
+
+  const TABS: { id: Tab; label: string; badge?: number }[] = [
+    { id: 'browse',   label: '🔍 Browse'   },
+    { id: 'requests', label: '📩 Requests', badge: pendingCount },
+    { id: 'history',  label: '📜 History'  },
+  ];
+
+  // ── Waiting screen (full-page) ──────────────────────────────────────────────
+  if (mode === 'waiting' && pendingMatchId && pendingPartner) {
+    return (
+      <WaitingScreen
+        partner={pendingPartner}
+        topic={pendingTopic}
+        onCancel={() => dispatch(matchActions.cancelWaiting())}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#fffbf5]">
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => dispatch(clearToast())} />
+      )}
+
+      {/* MatchFoundModal — for User 1 after partner accepts */}
+      {mode === 'matched' && matchedPartner && (
+        <MatchFoundModal
+          partner={matchedPartner}
+          topic={matchedTopic}
+          sessionId={matchedSessionId}
+          onStart={() => goToSession(matchedSessionId)}
+        />
+      )}
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500
+              flex items-center justify-center text-white font-black text-lg shadow-md">S</div>
+            <div>
+              <h1 className="font-black text-gray-900 text-lg leading-none">Find a Partner</h1>
+              <p className="text-gray-400 text-xs font-semibold">Choose who you debate with</p>
+            </div>
+          </div>
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex-1 py-2 rounded-lg text-sm font-extrabold transition-all flex items-center justify-center gap-1.5
+                  ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t.label}
+                {t.badge ? (
+                  <span className="bg-orange-500 text-white text-[10px] font-black rounded-full
+                    w-4 h-4 flex items-center justify-center">{t.badge}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-6">
+
+        {/* ── Browse ── */}
+        {tab === 'browse' && (
+          usersLoading ? (
+            <div className="flex justify-center py-24">
+              <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : currentUser ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-bold text-gray-500">{cardIdx + 1} of {users.length}</p>
+                <div className="flex gap-1">
+                  {users.map((_: any, i: number) => (
+                    <div key={i} className={`h-1.5 rounded-full transition-all
+                      ${i < cardIdx ? 'w-4 bg-orange-400' : i === cardIdx ? 'w-6 bg-orange-500' : 'w-4 bg-gray-200'}`} />
+                  ))}
+                </div>
+              </div>
+              <SwipeCard
+                user={currentUser} topic={topic} onTopic={setTopic}
+                onSkip={handleSkip} onSend={handleSend}
+                sending={false} exiting={false} exitDir={null}
+              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="text-7xl mb-4">🎉</div>
+              <p className="text-gray-700 font-black text-2xl mb-2">You've seen everyone!</p>
+              <p className="text-gray-400 font-semibold mb-6">Check your requests tab for responses.</p>
+              <button
+                onClick={() => dispatch(matchActions.loadUsers({ userId: myUserId }))}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500
+                  text-white font-extrabold shadow-md hover:shadow-lg transition-all">
+                Refresh 🔄
+              </button>
+            </div>
+          )
+        )}
+
+        {/* ── Requests ── */}
+        {tab === 'requests' && (
+          <IncomingRequests
+            requests={requests}
+            loading={requestsLoading}
+            myUserId={myUserId}
+            onAccept={(match) => dispatch(matchActions.acceptRequest({ matchId: match.id, match }))}
+            onReject={(matchId) => dispatch(matchActions.rejectRequest({ matchId }))}
+            onStartSession={goToSession}
+          />
+        )}
+
+        {/* ── History ── */}
+        {tab === 'history' && (
+          <MatchHistory history={history} loading={historyLoading} myUserId={myUserId} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MatchPage;

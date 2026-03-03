@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-// FIX: sessionActions lives in the SAGA, not the slice.
-// The slice only exports state actions (setSearching, setMatched, etc.)
 import { sessionActions } from '../../redux/saga/session.saga';
 import MatchmakingScreen from '../../components/modules/sessions/MatchmakingScreen';
 import SessionScreen from '../../components/modules/sessions/sessionScreen/index';
 import ResultScreen from '../../components/modules/sessions/ResultScreen';
-import IdleScreen from '../../components/modules/sessions/IdleScreen';
 
 const DebatePage = () => {
-  const dispatch = useDispatch();
-  // FIX: removed 'connecting' and 'waiting' — valid statuses are:
-  // 'idle' | 'searching' | 'matched' | 'in_session' | 'ended'
+  const dispatch  = useDispatch();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { status } = useSelector((s: any) => s.session);
 
-  const reduxUserId: number | null = useSelector(
-    (s: any) => s.profile?.profileStats?.userId ?? null,
-  );
+  // State passed from MatchPage / GlobalMatchWatcher after a match is accepted
+  const locationState = location.state as {
+    sessionId?: string;
+    partnerId?: number;
+    topic?:     string;
+  } | null;
 
   const [dbUserId, setDbUserId] = useState<number | null>(() => {
     const stored = localStorage.getItem('db_user_id');
@@ -36,22 +37,30 @@ const DebatePage = () => {
     return () => clearInterval(interval);
   }, [dbUserId]);
 
-  // Also accept userId from Redux profile if available sooner than localStorage
+  // On mount: if no sessionId in router state → send to /match
+  // If sessionId present → kick off the saga
   useEffect(() => {
-    if (!dbUserId && reduxUserId) setDbUserId(reduxUserId);
-  }, [reduxUserId, dbUserId]);
+    if (!dbUserId) return;
 
-  // FIX: was dispatching sessionActions.connect / sessionActions.disconnect
-  // — those don't exist. The correct actions are sessionActions.findPartner
-  // (dispatched by IdleScreen when the user picks a topic) and
-  // sessionActions.leaveSession / sessionActions.reset (on unmount).
-  // This effect now only cleans up on unmount — it does NOT auto-start searching.
+    if (!locationState?.sessionId) {
+      // No session context — nothing to do here, go pick a partner
+      navigate('/match', { replace: true });
+      return;
+    }
+
+    if (status === 'idle') {
+      dispatch(sessionActions.findPartner({
+    }
+  }, [dbUserId]); // run once when userId is ready
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      dispatch(sessionActions.leaveSession());
+      redispatch(sessionActions.leaveSession());
     };
   }, [dispatch]);
 
+  // Loading state while db_user_id isn't written yet
   if (!dbUserId) {
     return (
       <div className="min-h-screen bg-stone-100 flex items-center justify-center">
@@ -66,10 +75,7 @@ const DebatePage = () => {
 
   return (
     <div className="min-h-screen bg-stone-100">
-      {/* idle — user picks a topic and clicks "Find Partner" */}
-      {status === 'idle' && <IdleScreen userId={dbUserId} />}
-
-      {/* searching — waiting in queue for an opponent */}
+      {/* searching — connecting to partner via socket */}
       {status === 'searching' && <MatchmakingScreen />}
 
       {/* matched / in_session — debate is live */}
@@ -79,6 +85,8 @@ const DebatePage = () => {
 
       {/* ended — show XP / result */}
       {status === 'ended' && <ResultScreen userId={dbUserId} />}
+
+      {/* idle with no locationState = redirect handled in useEffect above — render nothing */}
     </div>
   );
 };
