@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import UserAvatar from './UserAvatar';
 import type { MatchUser } from '../../../lib/matchApi';
 
@@ -12,13 +12,21 @@ interface Props {
 
 const MatchFoundModal: React.FC<Props> = ({ partner, topic, onStart, onCancel }) => {
   const [countdown, setCountdown] = useState(5);
+  const hasFired = useRef(false);
+  const onStartRef = useRef(onStart);
+  onStartRef.current = onStart;
 
-  // Auto-start after 5 seconds
+  // Auto-start after 5 seconds (fire only once)
   useEffect(() => {
-    if (countdown <= 0) { onStart(); return; }
+    if (countdown <= 0 && !hasFired.current) {
+      hasFired.current = true;
+      onStartRef.current();
+      return;
+    }
+    if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [countdown, onStart]);
+  }, [countdown]);
 
   const TOPIC_EMOJI: Record<string, string> = {
     daily_life: '☀️', travel: '✈️', food: '🍜', movies: '🎬', tech: '💻',

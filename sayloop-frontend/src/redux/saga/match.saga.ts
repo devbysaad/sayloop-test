@@ -298,5 +298,5 @@ export default function* matchSaga() {
   yield takeEvery(matchActions.acceptRequest.type, handleAcceptRequest);
   yield takeEvery(matchActions.rejectRequest.type, handleRejectRequest);
   yield takeEvery(matchActions.confirmReady.type, handleConfirmReady);
-  yield takeEvery(matchActions.initMatchSocket.type, handleInitMatchSocket);
+  yield takeLatest(matchActions.initMatchSocket.type, handleInitMatchSocket);
 }

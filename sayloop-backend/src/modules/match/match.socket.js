@@ -96,23 +96,33 @@ function registerMatchHandlers(io) {
                     });
                 }
 
-                // Determine partner
+                // Determine partner and find their socketId
                 const partnerId = match.requesterId === userId ? match.receiverId : match.requesterId;
                 const partner = await prisma.user.findUnique({
                     where: { id: partnerId },
                     select: { id: true, username: true, firstName: true, pfpSource: true },
                 });
 
+                // Look up partner's socket ID by checking if they are already in the session room
+                let partnerSocketId = null;
+                try {
+                    const sessionSockets = await io.in(sessionId).fetchSockets();
+                    const partnerSocket = sessionSockets.find(s => s.dbUserId === partnerId);
+                    if (partnerSocket) {
+                        partnerSocketId = partnerSocket.id;
+                    }
+                } catch { /* partner may not be connected yet */ }
+
                 socket.emit('session-joined', {
                     sessionId,
                     matchId: match.id,
                     topic: match.topic,
-                    partner: partner ? { userId: partner.id, socketId: null, username: partner.username, firstName: partner.firstName, pfpSource: partner.pfpSource } : null,
+                    partner: partner ? { userId: partner.id, socketId: partnerSocketId, username: partner.username, firstName: partner.firstName, pfpSource: partner.pfpSource } : null,
                     isInitiator: match.requesterId === userId,
                 });
 
-                // Notify the other user that their partner has joined
-                socket.to(sessionId).emit('partner-joined', { userId });
+                // Notify the other user that their partner has joined (include socketId)
+                socket.to(sessionId).emit('partner-joined', { userId, socketId: socket.id });
 
                 console.log(`[Match] User ${userId} joined session ${sessionId}`);
             } catch (err) {

@@ -48,22 +48,16 @@ const DebatePage = () => {
     }
   }, [dbUserId]); // run once when userId is ready
 
-  // If session returns to idle after it was started (user cancelled / reset),
-  // redirect back to /match instead of showing a blank page.
-  useEffect(() => {
-    if (hasStarted.current && status === 'idle') {
-      navigate('/match', { replace: true });
-    }
-  }, [status, navigate]);
 
-  // Cleanup on unmount — but NOT on initial mount (prevents StrictMode double-fire)
+
+  // Cleanup on unmount — only leave if session actually connected (not during StrictMode re-mount)
   useEffect(() => {
     return () => {
-      if (hasStarted.current) {
+      if (hasStarted.current && status !== 'idle') {
         dispatch(sessionActions.leaveSession());
       }
     };
-  }, [dispatch]);
+  }, [dispatch, status]);
 
   // Loading state while db_user_id isn't written yet
   if (!dbUserId) {

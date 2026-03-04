@@ -16,7 +16,9 @@ export const getOrCreateSocket = (
   token: string | null,
   clerkId?: string | null,
 ): Socket => {
-  if (socket?.connected) return socket;
+  // If socket exists and is either connected or connecting (.active), reuse it.
+  // This prevents concurrent calls from destroying pending sockets.
+  if (socket && socket.active) return socket;
 
   if (socket) {
     socket.removeAllListeners();

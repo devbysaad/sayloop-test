@@ -105,6 +105,12 @@ const sessionSlice = createSlice({
       state.status = 'in_session';
     },
 
+    updatePartnerSocketId(state, action: PayloadAction<string>) {
+      if (state.partner) {
+        state.partner.socketId = action.payload;
+      }
+    },
+
     receiveMessage(state, action: PayloadAction<{
       userId: number;
       message: string;
@@ -163,6 +169,7 @@ export const {
   setWaitingMessage,
   setMatched,
   setInSession,
+  updatePartnerSocketId,
   receiveMessage,
   receiveArgument,
   setDrawOffered,

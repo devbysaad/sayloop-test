@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthenticateWithRedirectCallback, useUser } from '@clerk/clerk-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Marketing from '../../page/LandingPages/Marketing';
@@ -52,26 +52,49 @@ function GlobalMatchWatcher() {
   const { isSignedIn } = useUser();
 
   const notification = useSelector((s: any) => s.match.notification);
+  const matchMode = useSelector((s: any) => s.match.mode);
+  const [socketDebug, setSocketDebug] = useState('not started');
+
   const myUserId = (() => {
     const v = localStorage.getItem('db_user_id');
     return v ? parseInt(v, 10) : null;
   })();
 
+  // Debug: log notification changes
+  useEffect(() => {
+    console.log('[GlobalMatchWatcher] notification changed:', notification, 'mode:', matchMode, 'pathname:', location.pathname);
+  }, [notification, matchMode, location.pathname]);
+
   // Initialize the match socket connection when user is signed in.
   // Retry until clerk_id is available in localStorage (set by useAuthInit after sync).
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn) {
+      console.log('[GlobalMatchWatcher] Not signed in, skipping socket init');
+      setSocketDebug('not signed in');
+      return;
+    }
     let attempts = 0;
     const maxAttempts = 8; // ~16 seconds
 
     const tryInit = () => {
       const dbId = localStorage.getItem('db_user_id');
       const clerkId = localStorage.getItem('clerk_id');
+      console.log(`[GlobalMatchWatcher] tryInit attempt=${attempts}: dbId=${dbId}, clerkId=${clerkId}`);
       if (dbId && clerkId) {
         console.log('[GlobalMatchWatcher] clerk_id available, dispatching initMatchSocket');
+        setSocketDebug(`connecting... (dbId=${dbId})`);
         dispatch(matchActions.initMatchSocket());
+
+        // Check socket state after a delay
+        setTimeout(async () => {
+          const sock = (await import('../../redux/service/socket.service')).getSocket();
+          const state = sock ? (sock.connected ? 'connected' : sock.active ? 'connecting' : 'disconnected') : 'null';
+          console.log(`[GlobalMatchWatcher] Socket state after init: ${state}, id=${sock?.id}`);
+          setSocketDebug(`socket: ${state} (id=${sock?.id || 'none'})`);
+        }, 3000);
         return true;
       }
+      setSocketDebug(`waiting for auth... (attempt ${attempts})`);
       return false;
     };
 
@@ -83,6 +106,7 @@ function GlobalMatchWatcher() {
         clearInterval(interval);
         if (attempts >= maxAttempts) {
           console.warn('[GlobalMatchWatcher] clerk_id not found after max attempts');
+          setSocketDebug('FAILED: no clerk_id after 8 attempts');
         }
       }
     }, 2000);
@@ -91,7 +115,21 @@ function GlobalMatchWatcher() {
   }, [isSignedIn, dispatch]);
 
   // Don't show the modal if user is already in a session
-  if (!notification || location.pathname === '/session') return null;
+  if (!notification || location.pathname === '/session') {
+    // Show debug info as a tiny floating badge in dev mode
+    if (import.meta.env.DEV) {
+      return (
+        <div style={{
+          position: 'fixed', bottom: 4, right: 4, zIndex: 9999,
+          background: 'rgba(0,0,0,0.7)', color: '#0f0', fontSize: 10, padding: '2px 6px',
+          borderRadius: 4, fontFamily: 'monospace', pointerEvents: 'none'
+        }}>
+          🔌 {socketDebug} | notif: {notification ? 'YES' : 'null'}
+        </div>
+      );
+    }
+    return null;
+  }
 
   const partner: MatchUser = {
     id: notification.requester?.id ?? 0,
@@ -105,8 +143,16 @@ function GlobalMatchWatcher() {
   };
 
   const handleStart = () => {
+    // Accept the match immediately
+    if (notification) {
+      dispatch(matchActions.acceptRequest({
+        matchId: notification.id,
+        match: notification
+      }));
+    }
     dispatch(clearNotification());
-    // Navigate to match page requests tab so user can accept/reject
+
+    // Navigate to match page where the MatchFoundModal will overlay instantly
     navigate('/match');
   };
 
@@ -114,11 +160,9 @@ function GlobalMatchWatcher() {
     dispatch(clearNotification());
   };
 
-  // Show a simpler notification for incoming requests (not the full MatchFoundModal)
-  // For accepted matches, the match saga handles the MatchFoundModal via setMatched
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} >
       <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl"
         style={{ animation: 'popIn 0.4s cubic-bezier(.34,1.56,.64,1)' }}>
         <div className="bg-gradient-to-br from-blue-400 to-indigo-500 px-6 pt-8 pb-6 text-center">
@@ -150,7 +194,7 @@ function GlobalMatchWatcher() {
               text-white font-black text-lg shadow-[0_8px_24px_rgba(251,191,36,0.45)]
               hover:shadow-[0_12px_32px_rgba(251,191,36,0.55)]
               hover:-translate-y-0.5 transition-all active:scale-95">
-            View Request 👀
+            Accept & Debate 🚀
           </button>
           <button onClick={handleCancel}
             className="w-full mt-3 py-3 rounded-2xl border-2 border-gray-200 text-gray-500
@@ -166,7 +210,7 @@ function GlobalMatchWatcher() {
           to   { transform: scale(1);   opacity: 1; }
         }
       `}</style>
-    </div>
+    </div >
   );
 }
 

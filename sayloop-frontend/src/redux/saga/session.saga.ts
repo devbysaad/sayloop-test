@@ -11,6 +11,7 @@ import {
   receiveMessage, receiveArgument,
   setDrawOffered, setDrawReceived, setDrawNone,
   setResult, setSessionError, setWaitingMessage, resetSession,
+  updatePartnerSocketId,
 } from '../slice/session.slice';
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -78,7 +79,10 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
           break;
         }
         case 'partner-joined': {
-          // Our partner joined the session room — now both are here
+          // Our partner joined the session room — update their socketId for WebRTC
+          if (event.socketId) {
+            yield put(updatePartnerSocketId(event.socketId));
+          }
           yield put(setInSession());
           break;
         }
@@ -157,7 +161,7 @@ function* joinSessionFlow(action: ReturnType<typeof sessionActions.joinSession>)
   yield cancel(watchTask);
   channel.close();
   socket.emit('leave-session');
-  disconnectSocket();
+  // Do NOT call disconnectSocket() — it kills the shared socket used by match saga
   yield put(resetSession());
 }
 

@@ -22,21 +22,38 @@ const matchesService = {
       throw Object.assign(new Error('The selected partner was not found. They may have deleted their account.'), { status: 404 });
     }
 
-    // Check for existing active match between these users (PENDING or ACCEPTED)
+    // Check for existing PENDING match between these users
     const existing = await prisma.match.findFirst({
       where: {
-        status: { in: ['PENDING', 'ACCEPTED'] },
+        status: 'PENDING',
         OR: [
           { requesterId: userId, receiverId: partnerId },
           { requesterId: partnerId, receiverId: userId },
         ],
       },
+      include: {
+        requester: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+        receiver: { select: { id: true, username: true, firstName: true, pfpSource: true, points: true } },
+      },
     });
 
     if (existing) {
-      // If it's still active, return it — don't create a duplicate
+      // If it's still pending, return it — don't create a duplicate
       return existing;
     }
+
+    // Mark any stale matches between these two users as ABANDONED
+    // (e.g. if they previously accepted a match but never completed the session)
+    await prisma.match.updateMany({
+      where: {
+        status: { in: ['ACCEPTED', 'CONFIRMED', 'IN_SESSION'] },
+        OR: [
+          { requesterId: userId, receiverId: partnerId },
+          { requesterId: partnerId, receiverId: userId },
+        ],
+      },
+      data: { status: 'ABANDONED' },
+    });
 
     const match = await prisma.match.create({
       data: { requesterId: userId, receiverId: partnerId, topic, status: 'PENDING' },

@@ -14,11 +14,18 @@ const requestMatch = async (req, res) => {
 
     // Emit real-time notification to the receiver
     if (io && result.status === 'PENDING') {
+      // Debug: check if receiver has any sockets in their room
+      const room = `user:${result.receiverId}`;
+      const socketsInRoom = await io.in(room).fetchSockets();
+      console.log(`[Match:requestMatch] Emitting match:request-received to room=${room}, sockets in room=${socketsInRoom.length}, socketIds=${socketsInRoom.map(s => s.id).join(',')}`);
+
       emitToUser(io, result.receiverId, 'match:request-received', {
         matchId: result.id,
         topic: result.topic,
         requester: result.requester,
       });
+    } else {
+      console.warn(`[Match:requestMatch] NOT emitting: io=${!!io}, status=${result.status}`);
     }
 
     return res.status(201).json({

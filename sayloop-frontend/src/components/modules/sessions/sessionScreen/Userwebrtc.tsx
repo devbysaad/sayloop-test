@@ -133,16 +133,26 @@ export const useWebRTC = (
 
         const pc = buildPC(stream);
 
-        const { isInitiator, partner } = sessionRef.current;
+        const { isInitiator } = sessionRef.current;
         if (isInitiator) {
-          if (!partner?.socketId) {
-            console.error('[WebRTC] isInitiator=true but partner.socketId missing');
+          // Wait for partner's socketId to be available (may arrive via partner-joined event)
+          let partnerSocketId = sessionRef.current.partner?.socketId;
+          let retries = 0;
+          while (!partnerSocketId && retries < 20) {
+            await new Promise(r => setTimeout(r, 500));
+            partnerSocketId = sessionRef.current.partner?.socketId;
+            retries++;
+          }
+
+          if (!partnerSocketId) {
+            console.error('[WebRTC] isInitiator=true but partner.socketId still missing after retries');
             return;
           }
+
           const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: true });
           await pc.setLocalDescription(offer);
-          socket.emit('offer', { offer, to: partner.socketId });
-          console.log('[WebRTC] Offer sent to', partner.socketId);
+          socket.emit('offer', { offer, to: partnerSocketId });
+          console.log('[WebRTC] Offer sent to', partnerSocketId);
         }
       } catch (err) {
         console.error('[WebRTC] getUserMedia failed:', err);
