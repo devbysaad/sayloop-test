@@ -46,7 +46,8 @@ function registerSessionHandlers(io) {
             partnerId: opponent.userId,
             topic,
           });
-          const accepted = await matchesService.acceptMatch(matchRecord.matchId, opponent.userId);
+          // requestMatch returns the full match object (has .id, not .matchId)
+          const accepted = await matchesService.acceptMatch(matchRecord.id, opponent.userId);
           sessionId = accepted.sessionId;
         } catch (err) {
           console.error('[Socket] Match DB error:', err.message);

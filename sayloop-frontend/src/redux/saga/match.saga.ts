@@ -33,12 +33,17 @@ export const matchActions = {
 // ─── Helper: get Clerk auth for socket ────────────────────────────────────────
 function* getClerkAuth(): Generator {
   let token: string | null = null;
-  let clerkId: string | null = null;
+  // Read clerkId from localStorage (stored by useAuthInit hook)
+  const clerkId: string | null = localStorage.getItem('clerk_id');
+
+  // Try to get JWT token via window.Clerk (may not be available in Clerk v5+)
   try {
     const clerk = (window as any).Clerk;
-    if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
-    if (clerk?.user?.id) clerkId = clerk.user.id as string;
-  } catch { /* Clerk not ready */ }
+    if (clerk?.session) {
+      token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
+    }
+  } catch { /* Clerk not available on window */ }
+
   return { token, clerkId };
 }
 
@@ -66,6 +71,7 @@ function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChan
   try {
     while (true) {
       const event: any = yield take(channel);
+      console.log('[MatchSaga] Socket event received:', event.type, event);
       switch (event.type) {
         case 'match:request-received': {
           // User 2 receives a match request in real-time
@@ -83,6 +89,12 @@ function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChan
           // Both users receive this when the match is accepted
           const matchId = event.matchId;
           markMatchSeen(matchId);
+
+          // Check if we already handled this match (e.g. User 2 already set matched from REST response)
+          const currentState: any = yield select((s: any) => s.match);
+          if (currentState.mode === 'matched' && currentState.matchedMatchId === matchId) {
+            break; // Already handled — skip duplicate
+          }
 
           // Build partner from whichever side the current user is NOT
           const myId = Number(localStorage.getItem('db_user_id') ?? '0');
@@ -136,17 +148,26 @@ function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChan
 // ─── Initialize persistent match socket listener ──────────────────────────────
 function* handleInitMatchSocket(): Generator {
   const dbUserId = localStorage.getItem('db_user_id');
-  if (!dbUserId) return;
+  if (!dbUserId) {
+    console.warn('[MatchSaga] initMatchSocket: no db_user_id in localStorage');
+    return;
+  }
 
   const auth: any = yield call(getClerkAuth);
-  if (!auth.clerkId) return;
+  if (!auth.clerkId) {
+    console.warn('[MatchSaga] initMatchSocket: no clerkId available (not in localStorage.clerk_id or window.Clerk)');
+    return;
+  }
 
   try {
+    console.log('[MatchSaga] initMatchSocket: connecting socket with clerkId:', auth.clerkId);
     const socket: Socket = yield call(getOrCreateSocket, auth.token, auth.clerkId);
     yield call(ensureConnected, socket);
+    console.log('[MatchSaga] initMatchSocket: socket connected, setting up event channel');
 
     const channel = createMatchEventChannel(socket);
     yield fork(watchMatchSocketEvents, channel);
+    console.log('[MatchSaga] initMatchSocket: event channel active, listening for match events');
   } catch (err: any) {
     console.warn('[MatchSaga] Could not init match socket:', err?.message);
   }

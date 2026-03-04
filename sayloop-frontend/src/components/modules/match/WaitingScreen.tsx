@@ -10,18 +10,18 @@ import type { MatchUser } from '../../../lib/matchApi';
  */
 interface Props {
   partner: MatchUser;
-  topic:   string;
+  topic: string;
   onCancel: () => void;
 }
 
 const TOPIC_EMOJI: Record<string, string> = {
-  daily_life:'☀️', travel:'✈️', food:'🍜', movies:'🎬', tech:'💻',
-  sports:'⚽', books:'📚', science:'🔬', business:'💼', art:'🎨', gaming:'🎮', health:'🏃',
+  daily_life: '☀️', travel: '✈️', food: '🍜', movies: '🎬', tech: '💻',
+  sports: '⚽', books: '📚', science: '🔬', business: '💼', art: '🎨', gaming: '🎮', health: '🏃',
 };
 
 const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
   const [seconds, setSeconds] = useState(0);
-  const [dots, setDots]       = useState('');
+  const [dots, setDots] = useState('');
 
   useEffect(() => {
     const t = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
@@ -49,7 +49,7 @@ const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
         Waiting for {partner.firstName}{dots}
       </h2>
       <p className="text-gray-400 font-semibold text-sm mb-6 text-center">
-        Saga is polling every 3s — hang tight!
+        Waiting for their response — you'll be notified instantly
       </p>
 
       {/* Topic chip */}
@@ -73,12 +73,12 @@ const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
         </div>
         <div className="bg-amber-50 rounded-xl p-3 flex items-center gap-3">
           <div className="flex gap-1">
-            {[0,1,2].map(i => (
+            {[0, 1, 2].map(i => (
               <div key={i} className="w-2 h-2 rounded-full bg-amber-400"
                 style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
             ))}
           </div>
-          <p className="text-amber-700 font-bold text-xs">Polling for their response…</p>
+          <p className="text-amber-700 font-bold text-xs">Listening for their response…</p>
         </div>
       </div>
 

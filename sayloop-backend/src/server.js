@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 const { verifyToken } = require('@clerk/clerk-sdk-node');
 const { registerSessionHandlers } = require('./modules/sessions/session.socket');
 const { registerMatchHandlers } = require('./modules/match/match.socket');
+const { startScheduler } = require('./utils/scheduler');
 
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
@@ -99,6 +100,7 @@ const startServer = async () => {
   server.listen(PORT, () => {
     console.log(`✓ HTTP  server running on port ${PORT}`);
     console.log(`✓ WS    server running on port ${PORT}`);
+    startScheduler();
   });
 };
 

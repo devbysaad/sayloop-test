@@ -29,9 +29,10 @@ const MatchPage = () => {
   const [tab, setTab] = useState<Tab>('browse');
   const [topic, setTopic] = useState('');
 
-  // Initialize match socket listener on mount
+  // Initialize match socket listener on mount (if not already initialized by GlobalMatchWatcher)
   useEffect(() => {
-    if (myUserId) {
+    const clerkId = localStorage.getItem('clerk_id');
+    if (myUserId && clerkId) {
       dispatch(matchActions.initMatchSocket());
     }
   }, [myUserId]);

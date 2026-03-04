@@ -57,12 +57,38 @@ function GlobalMatchWatcher() {
     return v ? parseInt(v, 10) : null;
   })();
 
-  // Initialize the match socket connection when user is signed in
+  // Initialize the match socket connection when user is signed in.
+  // Retry until clerk_id is available in localStorage (set by useAuthInit after sync).
   useEffect(() => {
-    if (isSignedIn && myUserId) {
-      dispatch(matchActions.initMatchSocket());
-    }
-  }, [isSignedIn, myUserId, dispatch]);
+    if (!isSignedIn) return;
+    let attempts = 0;
+    const maxAttempts = 8; // ~16 seconds
+
+    const tryInit = () => {
+      const dbId = localStorage.getItem('db_user_id');
+      const clerkId = localStorage.getItem('clerk_id');
+      if (dbId && clerkId) {
+        console.log('[GlobalMatchWatcher] clerk_id available, dispatching initMatchSocket');
+        dispatch(matchActions.initMatchSocket());
+        return true;
+      }
+      return false;
+    };
+
+    if (tryInit()) return; // Already available
+
+    const interval = setInterval(() => {
+      attempts++;
+      if (tryInit() || attempts >= maxAttempts) {
+        clearInterval(interval);
+        if (attempts >= maxAttempts) {
+          console.warn('[GlobalMatchWatcher] clerk_id not found after max attempts');
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isSignedIn, dispatch]);
 
   // Don't show the modal if user is already in a session
   if (!notification || location.pathname === '/session') return null;

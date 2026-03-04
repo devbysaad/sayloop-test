@@ -100,12 +100,16 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
 // ─── Helper: get Clerk auth ──────────────────────────────────────────────────
 function* getClerkAuth(): Generator {
   let token: string | null = null;
-  let clerkId: string | null = null;
+  // Read clerkId from localStorage (stored by useAuthInit hook)
+  const clerkId: string | null = localStorage.getItem('clerk_id');
+
   try {
     const clerk = (window as any).Clerk;
-    if (clerk?.session) token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
-    if (clerk?.user?.id) clerkId = clerk.user.id as string;
-  } catch { /* Clerk not ready */ }
+    if (clerk?.session) {
+      token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
+    }
+  } catch { /* Clerk not available on window */ }
+
   return { token, clerkId };
 }
 

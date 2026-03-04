@@ -64,6 +64,10 @@ export const useAuthInit = () => {
         if (dbUser?.id) {
           localStorage.setItem('db_user_id', dbUser.id.toString());
         }
+        // Store clerkId so sagas can access it for socket auth (window.Clerk not available in Clerk v5+)
+        if (user.id) {
+          localStorage.setItem('clerk_id', user.id);
+        }
 
         syncedRef.current = true;
         retryCountRef.current = 0;
