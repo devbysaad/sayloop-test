@@ -43,7 +43,8 @@ export const useWebRTC = (
   const sessionRef = useRef(sessionState);
   useEffect(() => { sessionRef.current = sessionState; }, [sessionState]);
 
-  const socket = getSocket();
+  // ✅ FIX: Don't capture socket at render time — read it inside the effect
+  // so we always get the live socket that was created by joinSessionFlow.
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -79,7 +80,7 @@ export const useWebRTC = (
     startDrawCooldown();
   }, [canOfferDraw, dispatch, startDrawCooldown]);
 
-  const buildPC = useCallback((stream: MediaStream): RTCPeerConnection => {
+  const buildPC = useCallback((stream: MediaStream, socket: ReturnType<typeof getSocket>): RTCPeerConnection => {
     const pc = new RTCPeerConnection(buildIceServers());
     pcRef.current = pc;
 
@@ -112,9 +113,14 @@ export const useWebRTC = (
     };
 
     return pc;
-  }, [dispatch, remoteRef, socket]);
+  }, [dispatch, remoteRef]);
 
   useEffect(() => {
+    // ✅ FIX: Read socket fresh inside the effect, not at render time.
+    // This ensures we use the socket created by joinSessionFlow even if
+    // it didn't exist yet when the component first rendered.
+    const socket = getSocket();
+
     if (!socket) {
       console.warn('[WebRTC] socket not available — skipping init');
       return;
@@ -131,11 +137,11 @@ export const useWebRTC = (
         setLocalStream(stream);
         if (localRef.current) localRef.current.srcObject = stream;
 
-        const pc = buildPC(stream);
+        const pc = buildPC(stream, socket);
 
         const { isInitiator } = sessionRef.current;
         if (isInitiator) {
-          // Wait for partner's socketId to be available (may arrive via partner-joined event)
+          // Wait for partner's socketId to be available (arrives via partner-joined event)
           let partnerSocketId = sessionRef.current.partner?.socketId;
           let retries = 0;
           while (!partnerSocketId && retries < 20) {
@@ -163,7 +169,7 @@ export const useWebRTC = (
     const onOffer = async ({ offer, from }: { offer: RTCSessionDescriptionInit; from: string }) => {
       console.log('[WebRTC] Received offer from', from);
 
-      // FIX: wait for pcRef to be set in case init() hasn't finished yet
+      // Wait for pcRef to be set in case init() hasn't finished yet
       let attempts = 0;
       while (!pcRef.current && attempts < 30) {
         await new Promise(r => setTimeout(r, 100));
@@ -220,7 +226,7 @@ export const useWebRTC = (
       pcRef.current?.close();
       if (cooldownRef.current) clearInterval(cooldownRef.current);
     };
-  }, []);
+  }, []); // run once on mount
 
   const toggleMute = useCallback(() => {
     const tracks = streamRef.current?.getAudioTracks() ?? [];

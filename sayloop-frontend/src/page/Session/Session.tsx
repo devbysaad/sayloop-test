@@ -12,6 +12,8 @@ const DebatePage = () => {
   const location = useLocation();
   const { status } = useSelector((s: any) => s.session);
   const hasStarted = useRef(false);
+  const statusRef = useRef(status);
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   // State passed from MatchPage / GlobalMatchWatcher after a match is accepted
   const locationState = location.state as {
@@ -50,14 +52,14 @@ const DebatePage = () => {
 
 
 
-  // Cleanup on unmount — only leave if session actually connected (not during StrictMode re-mount)
+  // Cleanup on unmount — only leave if session actually connected
   useEffect(() => {
     return () => {
-      if (hasStarted.current && status !== 'idle') {
+      if (hasStarted.current && statusRef.current !== 'idle') {
         dispatch(sessionActions.leaveSession());
       }
     };
-  }, [dispatch, status]);
+  }, [dispatch]);
 
   // Loading state while db_user_id isn't written yet
   if (!dbUserId) {

@@ -11,7 +11,7 @@ import ResultScreen from '../../components/modules/sessions/ResultScreen';
  *
  * Flow:
  *   /match  →  user picks partner + topic  →  navigate('/session', { state })
- *   /session →  this page kicks off findPartner with the sessionId from state
+ *   /session →  this page kicks off joinSession with the sessionId from state
  *
  * If someone lands on /session with no state (direct URL hit), redirect to /match.
  */
@@ -23,7 +23,7 @@ const SessionPage = () => {
 
   const dbUserId = parseInt(localStorage.getItem('db_user_id') ?? '0', 10);
 
-  // State passed from MatchPage / GlobalMatchWatcher after a match is accepted
+  // State passed from MatchPage / GlobalMatchWatcher after a match is confirmed
   const locationState = location.state as {
     sessionId?: string;
     partnerId?: number;
@@ -37,14 +37,17 @@ const SessionPage = () => {
       return;
     }
 
-    // Kick off the session saga with the known sessionId + topic
+    // ✅ FIX: Dispatch joinSession (not findPartner) so the saga emits
+    // 'match:join-session' with the correct sessionId instead of entering
+    // the random matchmaking queue via 'find-partner'.
     if (locationState?.sessionId && status === 'idle' && dbUserId) {
-      dispatch(sessionActions.findPartner({
-        userId: dbUserId,
-        topic:  locationState.topic ?? 'General',
+      dispatch(sessionActions.joinSession({
+        userId:    dbUserId,
+        sessionId: locationState.sessionId,
+        topic:     locationState.topic ?? 'General',
       }));
     }
-  }, []);   // run once on mount
+  }, []); // run once on mount
 
   // Cleanup on unmount
   useEffect(() => {
