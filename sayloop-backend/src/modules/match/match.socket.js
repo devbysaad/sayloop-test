@@ -1,4 +1,5 @@
 const prisma = require('../../config/database');
+const { setSocketRoom } = require('../sessions/session.socket');
 
 // ─── In-memory readiness tracker ──────────────────────────────────────────────
 // matchId → Set<userId>  — tracks which users have clicked "Let's Go"
@@ -87,6 +88,7 @@ function registerMatchHandlers(io) {
                 }
 
                 socket.join(sessionId);
+                setSocketRoom(socket.id, sessionId);
 
                 // Update match to IN_SESSION if not already
                 if (match.status === 'CONFIRMED') {
