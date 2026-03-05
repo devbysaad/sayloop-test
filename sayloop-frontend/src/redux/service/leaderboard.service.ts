@@ -1,7 +1,3 @@
-/**
- * BUG FIXED: was using localStorage.getItem('clerk_token') — wrong Clerk token access.
- * Now uses axiosInstance which injects the correct Bearer token automatically.
- */
 import axiosInstance from '../../lib/axiosInstance';
 
 const leaderboardService = {
@@ -9,12 +5,16 @@ const leaderboardService = {
     const { data } = await axiosInstance.get('/api/leaderboard/paginated', {
       params: { page, limit },
     });
-    return data; // { success, data: { data[], total, page, limit, totalPages } }
+    // backend: { success, data: { data: [], total, page, limit, totalPages } }
+    // data     = { success, data: PaginatedLeaderboard }
+    // data.data = PaginatedLeaderboard 
+    return data.data;
   },
 
   async fetchUserRank(userId: number) {
     const { data } = await axiosInstance.get(`/api/leaderboard/rank/${userId}`);
-    return data; // { success, data: { userId, rank, points, streakLength } }
+    // backend: { success, data: { userId, rank, points, streakLength } }
+    return data.data;
   },
 };
 

@@ -1,80 +1,315 @@
 import PageShell from '../../components/modules/home/PageShell';
 
+const nodes = [
+  { id: 1, icon: '✓', label: 'START', type: 'start', pos: 'center' },
+  { id: 2, icon: '⭐', type: 'done', pos: 'right' },
+  { id: 3, icon: '📦', type: 'chest', pos: 'center' },
+  { id: 4, icon: '💬', type: 'talk', pos: 'left', big: true, tooltip: 'Talk to practice!' },
+  { id: 5, icon: '🧩', type: 'locked', pos: 'right' },
+  { id: 6, icon: '🏆', type: 'locked', pos: 'center' },
+];
+
+const posMap = {
+  left: 'self-start ml-6',
+  center: 'self-center',
+  right: 'self-end mr-6',
+};
+
 const Learn = () => {
   return (
     <PageShell>
-      {/* Section header */}
-      <div className="animate-fade-in-up bg-linear-to-br from-[#1a1a26] to-[#2d2d3d] rounded-[22px] px-6 py-5 mb-9 flex items-center justify-between gap-3 relative overflow-hidden font-sans">
-        <div className="absolute -top-6 -right-6 w-[100px] h-[100px] rounded-full bg-[radial-gradient(circle,#fde68a,transparent_65%)] opacity-20 pointer-events-none" />
+      <div
+        style={{
+          fontFamily: "'Nunito', sans-serif",
+          background: 'linear-gradient(180deg, #1a1a26 0%, #2d2d3d 100%)',
+          borderRadius: 22,
+          padding: '20px 16px',
+          marginBottom: 36,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: -24,
+            right: -24,
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, #fde68a, transparent 65%)',
+            opacity: 0.2,
+            pointerEvents: 'none',
+          }}
+        />
         <div>
-          <p className="text-[#9ca3af] text-[11px] font-extrabold m-0 mb-1 tracking-[1px] uppercase">← Section 1, Unit 1</p>
-          <h1 className="text-[#fffbf5] text-[clamp(15px,3vw,18px)] font-[900] m-0 leading-tight">Solo trip: Compare travel experiences</h1>
+          <p style={{ color: '#9ca3af', fontSize: 11, fontWeight: 800, margin: '0 0 4px', letterSpacing: 1, textTransform: 'uppercase' }}>
+            ← Section 1, Unit 1
+          </p>
+          <h1 style={{ color: '#fffbf5', fontSize: 'clamp(15px,3vw,18px)', fontWeight: 900, margin: 0, lineHeight: 1.2 }}>
+            Solo trip: Compare travel experiences
+          </h1>
         </div>
-        <button className="bg-white text-[#1a1a26] px-4 py-2.5 rounded-[12px] font-[800] text-[12px] border-none cursor-pointer font-sans shrink-0 flex items-center gap-1.5 whitespace-nowrap hover:bg-gray-50 transition-colors shadow-md">
+        <button
+          style={{
+            background: 'white',
+            color: '#1a1a26',
+            padding: '10px 16px',
+            borderRadius: 12,
+            fontWeight: 800,
+            fontSize: 12,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            fontFamily: 'inherit',
+          }}
+        >
           ≡ GUIDEBOOK
         </button>
       </div>
 
-      {/* Learning path */}
-      <div className="animate-fade-in-up [animation-delay:100ms] flex flex-col items-center pb-10 font-sans">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: 40, gap: 0 }}>
 
-        {/* Node 1 — START (active, bouncing) */}
-        <div className="animate-bounce-slow lesson-node w-[88px] h-[88px] rounded-full bg-linear-to-br from-[#fbbf24] to-[#f97316] border-4 border-[#d97706] flex flex-col items-center justify-center shadow-[0_10px_28px_rgba(251,191,36,0.45)] transition-transform hover:scale-105 cursor-pointer">
-          <span className="text-white text-[30px] leading-none">✓</span>
-          <span className="text-white text-[10px] font-[900]">START</span>
-        </div>
-
-        <div className="w-[3px] h-7 bg-linear-to-b from-[#fcd34d] to-[#fef3c7]" />
-
-        {/* Node 2 — Star (done) */}
-        <div className="lesson-node w-[70px] h-[70px] rounded-full bg-linear-to-br from-[#fbbf24] to-[#f97316] border-4 border-[#d97706] flex items-center justify-center shadow-[0_6px_18px_rgba(251,191,36,0.3)] transition-transform hover:scale-110 cursor-pointer">
-          <span className="text-[28px]">⭐</span>
-        </div>
-
-        <div className="w-[3px] h-7 bg-gray-200" />
-
-        {/* Node 3 — Chest (locked, wide) */}
-        <div className="lesson-node w-[110px] h-[78px] rounded-[18px] bg-white border-3 border-gray-200 flex items-center justify-center relative shadow-[0_4px_14px_rgba(0,0,0,0.06)] transition-transform hover:scale-105 cursor-pointer">
-          <span className="text-[36px]">📦</span>
-          <div className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-[11px]">🔒</div>
-        </div>
-
-        <div className="w-[3px] h-7 bg-gray-200" />
-
-        {/* Node 4 — Mascot (big, next unlock) */}
-        <div className="lesson-node relative group">
-          <div className="w-[116px] h-[116px] rounded-full bg-[#fef9f0] border-4 border-[#fcd34d] flex items-center justify-center shadow-[0_8px_24px_rgba(251,191,36,0.18)] transition-transform group-hover:scale-105 cursor-pointer">
-            <span className="text-[52px]">💬</span>
-          </div>
-          {/* Tooltip */}
-          <div className="absolute -bottom-11 left-1/2 -translate-x-1/2 bg-[#1a1a26] rounded-[10px] px-3 py-1.5 whitespace-nowrap transition-all group-hover:-translate-y-1">
-            <span className="text-[#f59e0b] text-[11px] font-[800]">Talk to practice!</span>
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[5px] border-b-[#1a1a26]" />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+              border: '4px solid #d97706',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 10px 28px rgba(251,191,36,0.45)',
+              cursor: 'pointer',
+              animation: 'bounce 2s infinite',
+            }}
+          >
+            <span style={{ color: 'white', fontSize: 28, lineHeight: 1 }}>✓</span>
+            <span style={{ color: 'white', fontSize: 10, fontWeight: 900, fontFamily: 'inherit' }}>START</span>
           </div>
         </div>
 
-        <div className="w-[3px] h-11 bg-gray-200" />
-
-        {/* Node 5 — Puzzle (locked) */}
-        <div className="lesson-node w-[70px] h-[70px] rounded-full bg-white border-3 border-gray-200 flex items-center justify-center relative shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform hover:scale-110 cursor-pointer">
-          <span className="text-[26px]">🧩</span>
-          <div className="absolute -top-2 -right-2 w-[22px] h-[22px] bg-gray-200 rounded-full flex items-center justify-center text-[10px]">🔒</div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 3, height: 28, background: 'linear-gradient(#fcd34d, #fef3c7)' }} />
         </div>
 
-        <div className="w-[3px] h-7 bg-gray-200" />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: 48 }}>
+          <div
+            style={{
+              width: 70,
+              height: 70,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+              border: '4px solid #d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 6px 18px rgba(251,191,36,0.3)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 28 }}>⭐</span>
+          </div>
+        </div>
 
-        {/* Node 6 — Trophy (locked) */}
-        <div className="lesson-node w-[70px] h-[70px] rounded-full bg-white border-3 border-gray-200 flex items-center justify-center relative shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-transform hover:scale-110 cursor-pointer">
-          <span className="text-[26px]">🏆</span>
-          <div className="absolute -top-2 -right-2 w-[22px] h-[22px] bg-gray-200 rounded-full flex items-center justify-center text-[10px]">🔒</div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 3, height: 28, background: '#e5e7eb' }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: 110,
+              height: 78,
+              borderRadius: 18,
+              background: 'white',
+              border: '3px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 36 }}>📦</span>
+            <div
+              style={{
+                position: 'absolute',
+                top: -10,
+                right: -10,
+                width: 24,
+                height: 24,
+                background: '#e5e7eb',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+              }}
+            >
+              🔒
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 3, height: 28, background: '#e5e7eb' }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-start', paddingLeft: 48 }}>
+          <div style={{ position: 'relative' }}>
+            <div
+              style={{
+                width: 116,
+                height: 116,
+                borderRadius: '50%',
+                background: '#fef9f0',
+                border: '4px solid #fcd34d',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(251,191,36,0.18)',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 52 }}>💬</span>
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -44,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#1a1a26',
+                borderRadius: 10,
+                padding: '6px 12px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span style={{ color: '#f59e0b', fontSize: 11, fontWeight: 800, fontFamily: 'inherit' }}>Talk to practice!</span>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -5,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '5px solid transparent',
+                  borderRight: '5px solid transparent',
+                  borderBottom: '5px solid #1a1a26',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 3, height: 44, background: '#e5e7eb' }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: 48 }}>
+          <div
+            style={{
+              width: 70,
+              height: 70,
+              borderRadius: '50%',
+              background: 'white',
+              border: '3px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 26 }}>🧩</span>
+            <div
+              style={{
+                position: 'absolute',
+                top: -8,
+                right: -8,
+                width: 22,
+                height: 22,
+                background: '#e5e7eb',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+              }}
+            >
+              🔒
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: 3, height: 28, background: '#e5e7eb' }} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: 70,
+              height: 70,
+              borderRadius: '50%',
+              background: 'white',
+              border: '3px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 26 }}>🏆</span>
+            <div
+              style={{
+                position: 'absolute',
+                top: -8,
+                right: -8,
+                width: 22,
+                height: 22,
+                background: '#e5e7eb',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 10,
+              }}
+            >
+              🔒
+            </div>
+          </div>
         </div>
 
       </div>
 
-      {/* Bottom label */}
-      <div className="text-center border-t-2 border-[#fef3c7] pt-5 font-sans">
-        <p className="text-[#9ca3af] text-[12px] font-bold m-0">Solo trip: Ask about transportation</p>
+      <div style={{ textAlign: 'center', borderTop: '2px solid #fef3c7', paddingTop: 20, fontFamily: 'inherit' }}>
+        <p style={{ color: '#9ca3af', fontSize: 12, fontWeight: 700, margin: 0 }}>Solo trip: Ask about transportation</p>
       </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
     </PageShell>
   );
 };
