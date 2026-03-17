@@ -1,139 +1,60 @@
 import React, { useState } from 'react';
-import { communicate, run, learn, top } from '../../../assets/LandingPage';
 
 const FEATURES = [
-  {
-    id: 'fun',
-    col: 'md:col-span-2',
-    bg: 'bg-white border-stone-200',
-    heading: 'Free, Fun, Effective',
-    body: 'Quick bite-sized lessons earn you points, unlock new levels, and build real fluency. Research shows it actually works.',
-    icon: '🚀',
-    iconBg: 'bg-green-50 border-green-200',
-    img: top,
-    imgAlt: 'Fun Learning',
-    layout: 'row',
-  },
-  {
-    id: 'gamified',
-    col: 'md:col-span-1 md:row-span-2',
-    bg: 'bg-green-600 border-green-500',
-    heading: 'Gamified Learning',
-    body: 'Stay motivated with streaks, leaderboards, and weekly challenges. Learning feels like a game — because it is.',
-    icon: '🏆',
-    iconBg: 'bg-white/20 border-white/30',
-    img: communicate,
-    imgAlt: 'Gamified',
-    layout: 'col',
-    dark: true,
-  },
-  {
-    id: 'science',
-    col: 'md:col-span-1',
-    bg: 'bg-white border-stone-200',
-    heading: 'Backed by Science',
-    body: 'Spaced repetition and proven teaching methods that delight learners and actually stick.',
-    icon: '🧪',
-    iconBg: 'bg-amber-50 border-amber-200',
-    img: learn,
-    imgAlt: 'Science',
-    layout: 'col-small',
-  },
-  {
-    id: 'ai',
-    col: 'md:col-span-1',
-    bg: 'bg-stone-900 border-stone-700',
-    heading: 'Personalized AI',
-    body: 'Lessons tailored to your exact level. The AI adapts every session so you\'re always challenged, never lost.',
-    icon: '🤖',
-    iconBg: 'bg-white/10 border-white/20',
-    img: run,
-    imgAlt: 'AI',
-    layout: 'col-small',
-    dark: true,
-  },
+  { id:'f1', heading:'Free, Fun, Effective',  body:'Earn XP for every conversation. Unlock levels, break streaks — without it feeling like homework.', icon:'🚀', wide:true,  bg:'#3B82F6', textColor:'white' },
+  { id:'f2', heading:'Gamified Learning',     body:'Streaks, leaderboards, weekly challenges. Learning is a game — and you get to win.', icon:'🏆', bg:'#EFF6FF', border:'#BFDBFE', textColor:'#1E293B', accent:'#3B82F6' },
+  { id:'f3', heading:'Backed by Science',     body:'Spaced repetition and proven methods that actually stick. No fluff, no filler.',                 icon:'🧪', bg:'#F0FDF4', border:'#BBF7D0', textColor:'#1E293B', accent:'#22C55E' },
+  { id:'f4', heading:'Personalized AI',       body:'Every session adapts to your exact level — always challenged, never bored.',                     icon:'🤖', bg:'#FFF7ED', border:'#FED7AA', textColor:'#1E293B', accent:'#F97316' },
+  { id:'f5', heading:'Debate Mode ⚔️',        body:'Choose a side. Argue it. Win XP. Debate mode turns every session into a battle of ideas.',        icon:'⚔️', bg:'#F0FDF4', border:'#BBF7D0', textColor:'#1E293B', accent:'#22C55E' },
+  { id:'f6', heading:'Instant Matching',      body:'Average match: 18 seconds. No waiting, no nonsense. Just real humans, really fast.',              icon:'⚡', bg:'#EFF6FF', border:'#BFDBFE', textColor:'#1E293B', accent:'#3B82F6' },
 ];
 
 const BentoGrid = () => {
-  const [hovered, setHovered] = useState<string | null>(null);
-
+  const [hov, setHov] = useState<string | null>(null);
   return (
-    <section className="py-24 bg-stone-100 relative overflow-hidden">
-      {/* subtle dot grid */}
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{ backgroundImage: 'radial-gradient(circle, #292524 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&display=swap');
+        .feat-c { transition:transform 0.22s,box-shadow 0.22s; }
+        .feat-c:hover { transform:translateY(-7px); box-shadow:0 20px 40px rgba(0,0,0,0.08); }
+      `}</style>
+      <section id="features" className="py-24 bg-slate-50 relative overflow-hidden" style={{ fontFamily:"'Outfit',sans-serif" }}>
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{ backgroundImage:'radial-gradient(circle,#3B82F6 1px,transparent 1px)', backgroundSize:'28px 28px' }} />
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-14">
+            <span className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 mb-5 text-xs font-black uppercase tracking-widest text-green-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Why SayLoop?
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
+              Proven methods.<br />
+              <span style={{ background:'linear-gradient(135deg,#3B82F6,#22C55E)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Real results.</span>
+            </h2>
+          </div>
 
-        {/* Header */}
-        <div className="text-center mb-14">
-          <span className="inline-flex items-center gap-2 bg-green-50 border border-green-200
-                           text-green-700 text-[11px] font-bold uppercase tracking-widest
-                           rounded-full px-4 py-1.5 mb-5">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-            Why Sayloop?
-          </span>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-stone-900 leading-tight tracking-tight">
-            Proven methods.<br />
-            <span className="text-green-600">Real results.</span>
-          </h2>
-        </div>
-
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(280px,auto)]">
-          {FEATURES.map((f) => (
-            <div
-              key={f.id}
-              onMouseEnter={() => setHovered(f.id)}
-              onMouseLeave={() => setHovered(null)}
-              className={`${f.col} border rounded-[28px] p-8 overflow-hidden relative
-                          transition-all duration-300 cursor-default
-                          ${f.bg}
-                          ${hovered === f.id ? 'shadow-[0_8px_32px_rgba(0,0,0,0.12)] -translate-y-1' : 'shadow-sm'}
-                          ${f.layout === 'row' ? 'flex flex-col md:flex-row items-center gap-8' : 'flex flex-col'}
-                        `}
-            >
-              {/* glow */}
-              {f.dark && (
-                <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-              )}
-
-              {/* content block */}
-              <div className={`${f.layout === 'row' ? 'flex-1' : ''} relative z-10`}>
-                <div className={`w-11 h-11 ${f.iconBg} border rounded-2xl flex items-center justify-center text-xl mb-4
-                                 transition-transform duration-300 ${hovered === f.id ? 'scale-110' : ''}`}>
+          <div className="flex flex-wrap gap-4">
+            {FEATURES.map(f => (
+              <div key={f.id}
+                onMouseEnter={() => setHov(f.id)}
+                onMouseLeave={() => setHov(null)}
+                className={`feat-c rounded-3xl p-7 cursor-default relative overflow-hidden border-2 ${f.wide ? 'flex-[2] min-w-[280px]' : 'flex-1 min-w-[220px]'}`}
+                style={f.wide
+                  ? { background:f.bg, borderColor:'transparent' }
+                  : { background:f.bg, borderColor:f.border }
+                }>
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl mb-4 transition-transform duration-300 border-2 ${hov===f.id?' scale-110 rotate-3':''}`}
+                  style={f.wide ? { background:'rgba(255,255,255,0.25)', borderColor:'rgba(255,255,255,0.4)' } : { background:'white', borderColor:f.border }}>
                   {f.icon}
                 </div>
-                <h3 className={`text-xl font-extrabold mb-2 ${f.dark ? 'text-white' : 'text-stone-900'}`}>
-                  {f.heading}
-                </h3>
-                <p className={`text-sm leading-relaxed max-w-xs ${f.dark ? 'text-white/70' : 'text-stone-500'}`}>
-                  {f.body}
-                </p>
+                <h3 className="text-xl font-black mb-2" style={{ color: f.wide ? 'white' : f.accent }}>{f.heading}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: f.wide ? 'rgba(255,255,255,0.85)' : '#64748B' }}>{f.body}</p>
               </div>
-
-              {/* image */}
-              <div className={`relative z-10 flex justify-center
-                ${f.layout === 'row'       ? 'flex-1'        : ''}
-                ${f.layout === 'col'       ? 'mt-auto'       : ''}
-                ${f.layout === 'col-small' ? 'mt-auto'       : ''}
-              `}>
-                <img
-                  src={f.img}
-                  alt={f.imgAlt}
-                  className={`object-contain transition-transform duration-500
-                    ${f.layout === 'row'       ? 'max-h-[200px]' : ''}
-                    ${f.layout === 'col'       ? 'max-h-[160px] w-full max-w-[160px]' : ''}
-                    ${f.layout === 'col-small' ? 'max-h-[120px]' : ''}
-                    ${hovered === f.id         ? f.layout === 'row' ? 'rotate-2 scale-105' : 'scale-110' : ''}
-                  `}
-                />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
