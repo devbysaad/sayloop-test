@@ -1,6 +1,6 @@
 import {
   call, put, take, fork, cancel, cancelled,
-  takeLatest, takeEvery, race,
+  takeLatest, takeEvery, race, delay,
 } from 'redux-saga/effects';
 import { createAction } from '@reduxjs/toolkit';
 import { eventChannel, END } from 'redux-saga';
@@ -12,50 +12,70 @@ import {
   setDrawOffered, setDrawReceived, setDrawNone,
   setResult, setSessionError, setWaitingMessage, resetSession,
   updatePartnerSocketId,
+  setTimer, setMicWarning, clearMicWarning,
+  addXpPopup, removeXpPopup, tickSpeaking,
 } from '../slice/session.slice';
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 export const sessionActions = {
-  // Random matchmaking (find-partner queue) — kept for future "quick match"
-  findPartner: createAction<{ userId: number; topic: string }>('session/findPartner'),
-  // Join an existing match session (from accepted match)
-  joinSession: createAction<{ userId: number; sessionId: string; topic: string }>('session/joinSession'),
-  sendMessage: createAction<{ message: string }>('session/sendMessage'),
-  submitArgument: createAction<{ argument: string }>('session/submitArgument'),
-  offerDraw: createAction('session/offerDraw'),
-  acceptDraw: createAction('session/acceptDraw'),
-  declineDraw: createAction('session/declineDraw'),
-  resign: createAction('session/resign'),
-  leaveSession: createAction('session/leave'),
-  reset: createAction('session/reset'),
+  findPartner:      createAction<{ userId: number; topic: string }>('session/findPartner'),
+  joinSession:      createAction<{ userId: number; sessionId: string; topic: string }>('session/joinSession'),
+  sendMessage:      createAction<{ message: string }>('session/sendMessage'),
+  submitArgument:   createAction<{ argument: string }>('session/submitArgument'),
+  offerDraw:        createAction('session/offerDraw'),
+  acceptDraw:       createAction('session/acceptDraw'),
+  declineDraw:      createAction('session/declineDraw'),
+  resign:           createAction('session/resign'),
+  leaveSession:     createAction('session/leave'),
+  reset:            createAction('session/reset'),
+  // Mic reporting (called from component hooks on change only)
+  reportMicStatus:  createAction<{ isOn: boolean }>('session/reportMicStatus'),
+  reportSpeaking:   createAction('session/reportSpeaking'),
 };
 
-// ─── Socket channel ───────────────────────────────────────────────────────────
+// ─── Socket event channel ─────────────────────────────────────────────────────
 function createSocketChannel(socket: Socket) {
   return eventChannel((emit) => {
-    socket.on('connect', () => emit({ type: 'connected' }));
-    socket.on('connect_error', (e: Error) => emit({ type: 'connect_error', message: e.message }));
-    socket.on('waiting', (d: any) => emit({ type: 'waiting', ...d }));
-    socket.on('matched', (d: any) => emit({ type: 'matched', ...d }));
-    socket.on('session-joined', (d: any) => emit({ type: 'session-joined', ...d }));
-    socket.on('partner-joined', (d: any) => emit({ type: 'partner-joined', ...d }));
-    socket.on('chat-message', (d: any) => emit({ type: 'chat-message', ...d }));
-    socket.on('debate-argument', (d: any) => emit({ type: 'debate-argument', ...d }));
-    socket.on('draw-received', () => emit({ type: 'draw-received' }));
-    socket.on('draw-declined', () => emit({ type: 'draw-declined' }));
-    socket.on('draw-accepted', () => emit({ type: 'draw-accepted' }));
-    socket.on('opponent-resigned', () => emit({ type: 'opponent-resigned' }));
-    socket.on('session-error', (d: any) => emit({ type: 'session-error', ...d }));
-    socket.on('partner-disconnected', () => { emit({ type: 'partner-disconnected' }); emit(END); });
+    socket.on('connect',            ()      => emit({ type: 'connected' }));
+    socket.on('connect_error',      (e: Error) => emit({ type: 'connect_error', message: e.message }));
+    socket.on('waiting',            (d: any) => emit({ type: 'waiting', ...d }));
+    socket.on('matched',            (d: any) => emit({ type: 'matched', ...d }));
+    socket.on('session-joined',     (d: any) => emit({ type: 'session-joined', ...d }));
+    socket.on('partner-joined',     (d: any) => emit({ type: 'partner-joined', ...d }));
+    socket.on('chat-message',       (d: any) => emit({ type: 'chat-message', ...d }));
+    socket.on('debate-argument',    (d: any) => emit({ type: 'debate-argument', ...d }));
+    socket.on('draw-received',      ()       => emit({ type: 'draw-received' }));
+    socket.on('draw-declined',      ()       => emit({ type: 'draw-declined' }));
+    socket.on('draw-accepted',      ()       => emit({ type: 'draw-accepted' }));
+    socket.on('opponent-resigned',  ()       => emit({ type: 'opponent-resigned' }));
+    socket.on('session-error',      (d: any) => emit({ type: 'session-error', ...d }));
+    socket.on('partner-disconnected', ()     => { emit({ type: 'partner-disconnected' }); emit(END); });
+
+    // ── New events ──────────────────────────────────────────────────────────
+    socket.on('session:start',   (d: any) => emit({ type: 'session:start', ...d }));
+    socket.on('timer:update',    (d: any) => emit({ type: 'timer:update', secondsLeft: d.secondsLeft }));
+    socket.on('session:end',     (d: any) => emit({ type: 'session:end', ...d }));
+    socket.on('mic:warning',     (d: any) => emit({ type: 'mic:warning', secondsLeft: d.secondsLeft }));
+    socket.on('mic:warning:cleared', ()   => emit({ type: 'mic:warning:cleared' }));
+    socket.on('user:resigned',   (d: any) => emit({ type: 'user:resigned', ...d }));
 
     return () => {
       [
         'connect', 'connect_error', 'waiting', 'matched', 'session-joined', 'partner-joined',
         'chat-message', 'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
         'opponent-resigned', 'partner-disconnected', 'session-error',
+        'session:start', 'timer:update', 'session:end', 'mic:warning', 'mic:warning:cleared', 'user:resigned',
       ].forEach(ev => socket.off(ev));
     };
   });
+}
+
+// ─── XP popup helper ─────────────────────────────────────────────────────────
+function* spawnXpPopup(amount: number, label: string): Generator {
+  const id = `${Date.now()}-${Math.random()}`;
+  yield put(addXpPopup({ amount, label }));
+  yield delay(2500);
+  yield put(removeXpPopup(id));
 }
 
 // ─── Socket event watcher ─────────────────────────────────────────────────────
@@ -67,33 +87,91 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
         case 'connected': break;
         case 'connect_error': yield put(setSessionError('Connection failed: ' + event.message)); break;
         case 'waiting': yield put(setWaitingMessage(event.message)); break;
-        case 'matched': yield put(setMatched({ sessionId: event.sessionId, partner: event.partner, isInitiator: event.isInitiator })); break;
-        case 'session-joined': {
-          // We joined an existing session room — enter the session
-          yield put(setMatched({
-            sessionId: event.sessionId,
-            partner: event.partner,
-            isInitiator: event.isInitiator,
-          }));
+
+        case 'matched':
+          yield put(setMatched({ sessionId: event.sessionId, partner: event.partner, isInitiator: event.isInitiator }));
+          break;
+
+        case 'session-joined':
+          yield put(setMatched({ sessionId: event.sessionId, partner: event.partner, isInitiator: event.isInitiator }));
           yield put(setInSession());
           break;
-        }
-        case 'partner-joined': {
-          // Our partner joined the session room — update their socketId for WebRTC
-          if (event.socketId) {
-            yield put(updatePartnerSocketId(event.socketId));
-          }
+
+        case 'partner-joined':
+          if (event.socketId) yield put(updatePartnerSocketId(event.socketId));
           yield put(setInSession());
           break;
-        }
-        case 'chat-message': yield put(receiveMessage({ userId: event.userId, message: event.message, isMe: false, timestamp: event.timestamp })); break;
-        case 'debate-argument': yield put(receiveArgument({ userId: event.userId, argument: event.argument, isMe: false, timestamp: event.timestamp })); break;
-        case 'draw-received': yield put(setDrawReceived()); break;
-        case 'draw-declined': yield put(setDrawNone()); break;
-        case 'draw-accepted': yield put(setDrawNone()); yield put(setResult({ outcome: 'draw', winnerId: null, xpEarned: 15 })); break;
-        case 'opponent-resigned': yield put(setResult({ outcome: 'resign', winnerId: null, xpEarned: 30 })); break;
-        case 'partner-disconnected': yield put(setResult({ outcome: 'opponent_disconnected', winnerId: null, xpEarned: 10 })); break;
+
+        case 'chat-message':
+          yield put(receiveMessage({ userId: event.userId, message: event.message, isMe: false, timestamp: event.timestamp }));
+          break;
+
+        case 'debate-argument':
+          yield put(receiveArgument({ userId: event.userId, argument: event.argument, isMe: false, timestamp: event.timestamp }));
+          break;
+
+        case 'draw-received':  yield put(setDrawReceived()); break;
+        case 'draw-declined':  yield put(setDrawNone()); break;
+        case 'draw-accepted':
+          yield put(setDrawNone());
+          yield put(setResult({ outcome: 'draw', winnerId: null, xpEarned: 15, breakdown: ['Draw — both sides argued well'] }));
+          break;
+
+        case 'opponent-resigned':
+          yield put(setResult({ outcome: 'resign', winnerId: null, xpEarned: 30, breakdown: ['Opponent resigned — +30 XP win bonus'] }));
+          break;
+
+        case 'partner-disconnected':
+          yield put(setResult({ outcome: 'opponent_disconnected', winnerId: null, xpEarned: 10, breakdown: ['Partner disconnected — +10 XP'] }));
+          break;
+
         case 'session-error': yield put(setSessionError(event.message)); break;
+
+        // ── New events ────────────────────────────────────────────────────
+        case 'session:start':
+          yield put(setInSession());
+          break;
+
+        case 'timer:update':
+          yield put(setTimer(event.secondsLeft));
+          break;
+
+        case 'session:end': {
+          // Show XP popups for each breakdown item
+          const { xpEarned, breakdown = [], speakingTime, sessionDuration } = event;
+          if (xpEarned > 0) {
+            yield fork(spawnXpPopup, xpEarned, `+${xpEarned} XP earned!`);
+          }
+          yield put(setResult({
+            outcome: 'time_up',
+            winnerId: null,
+            xpEarned: xpEarned ?? 0,
+            breakdown: breakdown,
+            speakingTime,
+            sessionDuration,
+          }));
+          break;
+        }
+
+        case 'mic:warning':
+          yield put(setMicWarning(event.secondsLeft));
+          break;
+
+        case 'mic:warning:cleared':
+          yield put(clearMicWarning());
+          break;
+
+        case 'user:resigned':
+          // This user was auto-resigned due to mic inactivity
+          if (event.reason === 'mic_inactive') {
+            yield put(setResult({
+              outcome: 'mic_inactive',
+              winnerId: null,
+              xpEarned: -15,
+              breakdown: ['Auto-resigned (mic inactive) — -15 XP penalty'],
+            }));
+          }
+          break;
       }
     }
   } finally {
@@ -101,92 +179,97 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
   }
 }
 
-// ─── Helper: get Clerk auth ──────────────────────────────────────────────────
+// ─── Mic activity reporter saga ────────────────────────────────────────────────
+// Responds to actions dispatched by the session screen component's mic state hook.
+// Emits ONLY on change (efficient — not a 1s poll).
+function* watchMicActivity(): Generator {
+  while (true) {
+    const action: any = yield take([
+      sessionActions.reportMicStatus.type,
+      sessionActions.reportSpeaking.type,
+    ]);
+    const socket = getSocket();
+    if (!socket?.connected) continue;
+
+    if (action.type === sessionActions.reportMicStatus.type) {
+      socket.emit('mic:status', { isOn: action.payload.isOn });
+      if (action.payload.isOn) {
+        // Mic just turned ON — start tracking speaking
+      }
+    }
+
+    if (action.type === sessionActions.reportSpeaking.type) {
+      socket.emit('speaking:tick');
+      yield put(tickSpeaking());
+    }
+  }
+}
+
+// ─── Auth helper ─────────────────────────────────────────────────────────────
 function* getClerkAuth(): Generator {
   let token: string | null = null;
-  // Read clerkId from localStorage (stored by useAuthInit hook)
   const clerkId: string | null = localStorage.getItem('clerk_id');
-
   try {
     const clerk = (window as any).Clerk;
     if (clerk?.session) {
       token = (yield call([clerk.session, clerk.session.getToken])) as string | null;
     }
-  } catch { /* Clerk not available on window */ }
-
+  } catch { /* not available */ }
   return { token, clerkId };
 }
 
-// ─── Join existing session flow (from accepted match) ─────────────────────────
+// ─── Join existing session ────────────────────────────────────────────────────
 function* joinSessionFlow(action: ReturnType<typeof sessionActions.joinSession>): Generator {
   const { userId, sessionId, topic } = action.payload;
-
   const auth: any = yield call(getClerkAuth);
-  if (!auth.clerkId) {
-    yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
-    return;
-  }
+  if (!auth.clerkId) { yield put(setSessionError('Not signed in.')); return; }
 
   const dbUserId = localStorage.getItem('db_user_id');
-  if (!dbUserId) {
-    yield put(setSessionError('Your account is still syncing. Please wait a moment and try again.'));
-    return;
-  }
+  if (!dbUserId) { yield put(setSessionError('Account still syncing. Wait a moment.')); return; }
 
-  // Connect socket (reuses existing if already connected)
   let socket: Socket;
   try {
     socket = (yield call(getOrCreateSocket, auth.token, auth.clerkId)) as Socket;
     yield call(ensureConnected, socket);
   } catch (err: any) {
-    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown error')));
+    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown')));
     return;
   }
 
   yield put(setSearching({ topic }));
-
-  // Join the existing session room on the server
   socket.emit('match:join-session', { sessionId });
 
-  // Set up event channel for all session events
   const channel = createSocketChannel(socket);
   const watchTask: any = yield fork(watchSocketEvents, channel);
+  const micTask: any = yield fork(watchMicActivity);
 
-  // Wait for user to leave or reset
   yield race({
     leave: take(sessionActions.leaveSession.type),
     reset: take(sessionActions.reset.type),
   });
 
   yield cancel(watchTask);
+  yield cancel(micTask);
   channel.close();
   socket.emit('leave-session');
-  // Do NOT call disconnectSocket() — it kills the shared socket used by match saga
   yield put(resetSession());
 }
 
-// ─── Random matchmaking flow (find-partner queue) ─────────────────────────────
+// ─── Random matchmaking ───────────────────────────────────────────────────────
 function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Generator {
   const { userId, topic } = action.payload;
-
   const auth: any = yield call(getClerkAuth);
-  if (!auth.clerkId) {
-    yield put(setSessionError('Not signed in. Please refresh and sign in again.'));
-    return;
-  }
+  if (!auth.clerkId) { yield put(setSessionError('Not signed in.')); return; }
 
   const dbUserId = localStorage.getItem('db_user_id');
-  if (!dbUserId) {
-    yield put(setSessionError('Your account is still syncing. Please wait a moment and try again.'));
-    return;
-  }
+  if (!dbUserId) { yield put(setSessionError('Account still syncing.')); return; }
 
   let socket: Socket;
   try {
     socket = (yield call(getOrCreateSocket, auth.token, auth.clerkId)) as Socket;
     yield call(ensureConnected, socket);
   } catch (err: any) {
-    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown error')));
+    yield put(setSessionError('Failed to connect: ' + (err?.message ?? 'Unknown')));
     return;
   }
 
@@ -195,21 +278,22 @@ function* sessionFlow(action: ReturnType<typeof sessionActions.findPartner>): Ge
 
   const channel = createSocketChannel(socket);
   const watchTask: any = yield fork(watchSocketEvents, channel);
+  const micTask: any = yield fork(watchMicActivity);
 
-  // Wait for user to leave or reset
   yield race({
     leave: take(sessionActions.leaveSession.type),
     reset: take(sessionActions.reset.type),
   });
 
   yield cancel(watchTask);
+  yield cancel(micTask);
   channel.close();
   socket.emit('leave-session');
   disconnectSocket();
   yield put(resetSession());
 }
 
-// ─── Message / action handlers ────────────────────────────────────────────────
+// ─── Message handlers ─────────────────────────────────────────────────────────
 function* handleSendMessage(action: ReturnType<typeof sessionActions.sendMessage>): Generator {
   const socket = getSocket();
   if (!socket?.connected) return;

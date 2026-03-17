@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import UserAvatar from './UserAvatar';
 import MatchFoundModal from './MatchFoundModal';
 import type { Match, MatchUser } from '../../../lib/matchApi';
+import { RequestCardSkeleton } from '../../ui/SkeletonCard';
 
 interface Props {
   requests: Match[];
@@ -34,8 +35,8 @@ const IncomingRequests: React.FC<Props> = ({
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col gap-3">
+      {[1, 2, 3].map(i => <RequestCardSkeleton key={i} />)}
     </div>
   );
 
@@ -85,15 +86,15 @@ const IncomingRequests: React.FC<Props> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => handleReject(m.id)}
-                className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-500 font-bold text-sm
+                className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 text-slate-500 font-bold text-sm
                   hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition-all"
               >
                 Decline
               </button>
               <button
                 onClick={() => handleAccept(m)}
-                className="flex-[2] py-2.5 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500
-                  text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                className="flex-[2] py-2.5 rounded-xl text-white font-extrabold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                style={{ background:'linear-gradient(135deg,#3B82F6,#22C55E)' }}
               >
                 🎉 Accept & Start
               </button>

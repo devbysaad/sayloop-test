@@ -9,6 +9,7 @@ import MatchFoundModal from '../../components/modules/match/MatchFoundModal';
 import IncomingRequests from '../../components/modules/match/IncomingRequest';
 import MatchHistory from '../../components/modules/match/MatchHistory';
 import Toast from '../../components/modules/match/Toast';
+import { SwipeCardSkeleton, RequestCardSkeleton, HistoryRowSkeleton } from '../../components/ui/SkeletonCard';
 
 type Tab = 'browse' | 'requests' | 'history';
 
@@ -112,24 +113,24 @@ const MatchPage = () => {
       )}
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
+      <div className="bg-white border-b-2 border-blue-100 px-4 py-4 sticky top-0 z-10 shadow-sm">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500
-              flex items-center justify-center text-white font-black text-lg shadow-md">S</div>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-md"
+              style={{ background:'linear-gradient(135deg,#3B82F6,#22C55E)' }}>💬</div>
             <div>
               <h1 className="font-black text-gray-900 text-lg leading-none">Find a Partner</h1>
-              <p className="text-gray-400 text-xs font-semibold">Choose who you debate with</p>
+              <p className="text-blue-400 text-xs font-semibold">Choose who you debate with</p>
             </div>
           </div>
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
             {TABS.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={`flex-1 py-2 rounded-lg text-sm font-extrabold transition-all flex items-center justify-center gap-1.5
-                  ${tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  ${tab === t.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 {t.label}
                 {t.badge ? (
-                  <span className="bg-orange-500 text-white text-[10px] font-black rounded-full
+                  <span className="bg-blue-500 text-white text-[10px] font-black rounded-full
                     w-4 h-4 flex items-center justify-center">{t.badge}</span>
                 ) : null}
               </button>
@@ -143,8 +144,8 @@ const MatchPage = () => {
         {/* ── Browse ── */}
         {tab === 'browse' && (
           usersLoading ? (
-            <div className="flex justify-center py-24">
-              <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-4">
+              <SwipeCardSkeleton />
             </div>
           ) : currentUser ? (
             <>

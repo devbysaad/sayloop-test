@@ -43,10 +43,13 @@ export const useWebRTC = (
   const sessionRef = useRef(sessionState);
   useEffect(() => { sessionRef.current = sessionState; }, [sessionState]);
 
-  // ✅ FIX: Don't capture socket at render time — read it inside the effect
-  // so we always get the live socket that was created by joinSessionFlow.
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // ── ICE candidate buffer ──────────────────────────────────────────────────
+  // Candidates that arrive before setRemoteDescription is called are buffered
+  // here and drained once the remote description is set.
+  const iceCandidateBuffer = useRef<RTCIceCandidateInit[]>([]);
 
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
@@ -63,11 +66,7 @@ export const useWebRTC = (
     setDrawCooldownSec(60);
     cooldownRef.current = setInterval(() => {
       setDrawCooldownSec(s => {
-        if (s <= 1) {
-          clearInterval(cooldownRef.current!);
-          setCanOfferDraw(true);
-          return 0;
-        }
+        if (s <= 1) { clearInterval(cooldownRef.current!); setCanOfferDraw(true); return 0; }
         return s - 1;
       });
     }, 1000);
@@ -80,6 +79,24 @@ export const useWebRTC = (
     startDrawCooldown();
   }, [canOfferDraw, dispatch, startDrawCooldown]);
 
+  /**
+   * Drain any buffered ICE candidates into the peer connection.
+   * Call this after setRemoteDescription completes.
+   */
+  const drainIceCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    const buffered = iceCandidateBuffer.current.splice(0);
+    if (buffered.length > 0) {
+      console.log(`[WebRTC] Draining ${buffered.length} buffered ICE candidates`);
+    }
+    for (const candidate of buffered) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn('[WebRTC] Buffered ICE candidate failed:', err);
+      }
+    }
+  }, []);
+
   const buildPC = useCallback((stream: MediaStream, socket: ReturnType<typeof getSocket>): RTCPeerConnection => {
     const pc = new RTCPeerConnection(buildIceServers());
     pcRef.current = pc;
@@ -87,6 +104,7 @@ export const useWebRTC = (
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
     pc.ontrack = event => {
+      console.log('[WebRTC] Remote track received — stream connected ✅');
       if (remoteRef.current) remoteRef.current.srcObject = event.streams[0];
       setRemoteReady(true);
       dispatch(setInSession());
@@ -116,9 +134,6 @@ export const useWebRTC = (
   }, [dispatch, remoteRef]);
 
   useEffect(() => {
-    // ✅ FIX: Read socket fresh inside the effect, not at render time.
-    // This ensures we use the socket created by joinSessionFlow even if
-    // it didn't exist yet when the component first rendered.
     const socket = getSocket();
 
     if (!socket) {
@@ -128,6 +143,7 @@ export const useWebRTC = (
 
     const init = async () => {
       try {
+        console.log('[WebRTC] Requesting camera/mic...');
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -136,12 +152,14 @@ export const useWebRTC = (
         streamRef.current = stream;
         setLocalStream(stream);
         if (localRef.current) localRef.current.srcObject = stream;
+        console.log('[WebRTC] Got local stream ✅');
 
         const pc = buildPC(stream, socket);
 
         const { isInitiator } = sessionRef.current;
+        console.log('[WebRTC] isInitiator:', isInitiator);
+
         if (isInitiator) {
-          // Wait for partner's socketId to be available (arrives via partner-joined event)
           let partnerSocketId = sessionRef.current.partner?.socketId;
           let retries = 0;
           while (!partnerSocketId && retries < 20) {
@@ -169,7 +187,7 @@ export const useWebRTC = (
     const onOffer = async ({ offer, from }: { offer: RTCSessionDescriptionInit; from: string }) => {
       console.log('[WebRTC] Received offer from', from);
 
-      // Wait for pcRef to be set in case init() hasn't finished yet
+      // Wait for pcRef to be set
       let attempts = 0;
       while (!pcRef.current && attempts < 30) {
         await new Promise(r => setTimeout(r, 100));
@@ -178,12 +196,15 @@ export const useWebRTC = (
 
       const pc = pcRef.current;
       if (!pc) {
-        console.error('[WebRTC] pcRef still null after waiting — offer dropped');
+        console.error('[WebRTC] pcRef still null — offer dropped');
         return;
       }
 
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log('[WebRTC] Remote description set (offer) ✅ — draining ICE buffer');
+        await drainIceCandidates(pc);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('answer', { answer, to: from });
@@ -196,19 +217,29 @@ export const useWebRTC = (
     const onAnswer = async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
       console.log('[WebRTC] Received answer');
       try {
-        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
+        const pc = pcRef.current;
+        if (!pc) return;
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('[WebRTC] Remote description set (answer) ✅ — draining ICE buffer');
+        await drainIceCandidates(pc);
       } catch (err) {
         console.error('[WebRTC] Error setting answer:', err);
       }
     };
 
     const onIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
+      if (!candidate) return;
+      const pc = pcRef.current;
+      if (!pc || !pc.remoteDescription) {
+        // Buffer it — remote description not set yet
+        console.log('[WebRTC] Buffering ICE candidate (remote description not ready yet)');
+        iceCandidateBuffer.current.push(candidate);
+        return;
+      }
       try {
-        if (candidate && pcRef.current) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        }
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
-        console.error('[WebRTC] Error adding ICE candidate:', err);
+        console.warn('[WebRTC] ICE candidate error (ignored):', err);
       }
     };
 
@@ -225,8 +256,9 @@ export const useWebRTC = (
       streamRef.current?.getTracks().forEach(t => t.stop());
       pcRef.current?.close();
       if (cooldownRef.current) clearInterval(cooldownRef.current);
+      iceCandidateBuffer.current = [];
     };
-  }, []); // run once on mount
+  }, []);
 
   const toggleMute = useCallback(() => {
     const tracks = streamRef.current?.getAudioTracks() ?? [];
@@ -234,6 +266,7 @@ export const useWebRTC = (
     const next = !tracks[0].enabled;
     tracks.forEach(t => { t.enabled = next; });
     setMuted(!next);
+    console.log('[Session] Mic toggled →', next ? 'ON 🎤' : 'OFF 🔇');
   }, []);
 
   const toggleCam = useCallback(() => {
@@ -242,6 +275,7 @@ export const useWebRTC = (
     const next = !tracks[0].enabled;
     tracks.forEach(t => { t.enabled = next; });
     setCamOff(!next);
+    console.log('[Session] Camera toggled →', next ? 'ON 📹' : 'OFF 📷');
   }, []);
 
   return {

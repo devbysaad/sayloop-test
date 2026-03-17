@@ -36,10 +36,19 @@ export interface Argument {
 }
 
 export interface SessionResult {
-  outcome: 'resign' | 'draw' | 'opponent_disconnected';
+  outcome: 'resign' | 'draw' | 'opponent_disconnected' | 'time_up' | 'mic_inactive';
   winnerId: number | null;
   xpEarned: number;
+  breakdown: string[];
+  speakingTime?: number;
+  sessionDuration?: number;
   sessionId?: string;
+}
+
+export interface XpPopup {
+  id: string;
+  amount: number;
+  label: string;
 }
 
 interface SessionState {
@@ -54,6 +63,16 @@ interface SessionState {
   debateResult: SessionResult | null;
   waitingMessage: string | null;
   error: string | null;
+
+  // ── Timer ──────────────────────────────────────────────────────────────────
+  timerSeconds: number | null;     // server-driven countdown (null = not started)
+
+  // ── Mic anti-abuse ─────────────────────────────────────────────────────────
+  micWarning: number | null;       // seconds until auto-resign (null = OK)
+
+  // ── XP system ──────────────────────────────────────────────────────────────
+  xpPopups: XpPopup[];             // transient popups (auto-dismissed)
+  speakingSeconds: number;         // local tracker for UI feedback only
 }
 
 const initialState: SessionState = {
@@ -68,6 +87,10 @@ const initialState: SessionState = {
   debateResult: null,
   waitingMessage: null,
   error: null,
+  timerSeconds: null,
+  micWarning: null,
+  xpPopups: [],
+  speakingSeconds: 0,
 };
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
@@ -76,13 +99,15 @@ const sessionSlice = createSlice({
   initialState,
   reducers: {
 
-    // FIX: setSearching now takes topic as payload.
-    // Previously called with no payload, then line 91 tried to read action.payload.topic → crash.
     setSearching(state, action: PayloadAction<{ topic: string }>) {
       state.status = 'searching';
       state.topic = action.payload.topic;
       state.error = null;
       state.debateResult = null;
+      state.timerSeconds = null;
+      state.micWarning = null;
+      state.xpPopups = [];
+      state.speakingSeconds = 0;
     },
 
     setWaitingMessage(state, action: PayloadAction<string>) {
@@ -135,27 +160,54 @@ const sessionSlice = createSlice({
       });
     },
 
-    setDrawOffered(state) {
-      state.drawState = 'offered';
-    },
-
-    setDrawReceived(state) {
-      state.drawState = 'received';
-    },
-
-    setDrawNone(state) {
-      state.drawState = 'none';
-    },
+    setDrawOffered(state) { state.drawState = 'offered'; },
+    setDrawReceived(state) { state.drawState = 'received'; },
+    setDrawNone(state) { state.drawState = 'none'; },
 
     setResult(state, action: PayloadAction<SessionResult>) {
       state.status = 'ended';
       state.debateResult = action.payload;
       state.drawState = 'none';
+      state.timerSeconds = null;
+      state.micWarning = null;
     },
 
     setSessionError(state, action: PayloadAction<string>) {
       state.error = action.payload;
       state.status = 'idle';
+    },
+
+    // ── Timer ────────────────────────────────────────────────────────────────
+    setTimer(state, action: PayloadAction<number>) {
+      state.timerSeconds = action.payload;
+    },
+
+    // ── Mic warning ──────────────────────────────────────────────────────────
+    setMicWarning(state, action: PayloadAction<number>) {
+      state.micWarning = action.payload;
+    },
+
+    clearMicWarning(state) {
+      state.micWarning = null;
+    },
+
+    // ── XP popups ────────────────────────────────────────────────────────────
+    addXpPopup(state, action: PayloadAction<{ amount: number; label: string }>) {
+      state.xpPopups.push({
+        id: `${Date.now()}-${Math.random()}`,
+        ...action.payload,
+      });
+      // Keep max 5 popups at a time
+      if (state.xpPopups.length > 5) state.xpPopups.shift();
+    },
+
+    removeXpPopup(state, action: PayloadAction<string>) {
+      state.xpPopups = state.xpPopups.filter(p => p.id !== action.payload);
+    },
+
+    // ── Speaking tracker (UI feedback only) ──────────────────────────────────
+    tickSpeaking(state) {
+      state.speakingSeconds += 1;
     },
 
     resetSession() {
@@ -177,6 +229,12 @@ export const {
   setDrawNone,
   setResult,
   setSessionError,
+  setTimer,
+  setMicWarning,
+  clearMicWarning,
+  addXpPopup,
+  removeXpPopup,
+  tickSpeaking,
   resetSession,
 } = sessionSlice.actions;
 

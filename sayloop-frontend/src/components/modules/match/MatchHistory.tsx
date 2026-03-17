@@ -1,6 +1,7 @@
 import React from 'react';
 import UserAvatar from './UserAvatar';
 import type { Match } from  '../../../lib/matchApi';
+import { HistoryRowSkeleton } from '../../ui/SkeletonCard';
 
 interface Props {
   history: Match[];
@@ -23,8 +24,8 @@ const TOPIC_EMOJI: Record<string, string> = {
 
 const MatchHistory: React.FC<Props> = ({ history, loading, myUserId }) => {
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col gap-3">
+      {[1, 2, 3].map(i => <HistoryRowSkeleton key={i} />)}
     </div>
   );
 
