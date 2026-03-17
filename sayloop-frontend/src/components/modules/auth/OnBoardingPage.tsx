@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../lib/axiosInstance";
+import NicknamePicker from "./NicknamePicker";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,8 @@ const INTERESTS = [
   { id: "health", label: "Health", emoji: "🏃", bg: "#f0fdf4", border: "#4ade80" },
 ];
 
-const STEPS = ["Name", "Photo", "Language", "Interests"];
+// Steps: 0 = Name+Nickname, 1 = Photo, 2 = Language, 3 = Interests
+const STEPS = ["Name & Nickname", "Photo", "Language", "Interests"];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -47,32 +49,37 @@ export default function OnboardingPage() {
   const [displayName, setDisplayName] = useState(
     user?.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : ""
   );
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(user?.imageUrl ?? null);
-  const [selectedLang, setSelectedLang] = useState(null);
-  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [selectedNickname, setSelectedNickname] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.imageUrl ?? null);
+  const [selectedLang, setSelectedLang] = useState<string | null>(null);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const fileRef = useRef();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  const toggleInterest = (id) => {
+  const toggleInterest = (id: string) => {
     setSelectedInterests((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
-  const canNext = () => {
-    if (step === 0) return displayName.trim().length >= 2;
-    if (step === 1) return true;   // photo is optional
+  const canNext = (): boolean => {
+    if (step === 0) {
+      const ok = displayName.trim().length >= 2 && selectedNickname.length >= 1;
+      console.log("[Onboarding] canNext step 0 →", ok, "| name:", displayName, "| nick:", selectedNickname);
+      return ok;
+    }
+    if (step === 1) return true;           // photo optional
     if (step === 2) return !!selectedLang;
     if (step === 3) return selectedInterests.length >= 1;
     return false;
   };
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
@@ -81,6 +88,7 @@ export default function OnboardingPage() {
   // ── Submit ───────────────────────────────────────────────────────────────────
 
   const handleFinish = async () => {
+    if (!user) return;
     setLoading(true);
     setError("");
     try {
@@ -88,7 +96,10 @@ export default function OnboardingPage() {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      // 1. Save everything to Clerk
+      // Store nickname locally
+      if (selectedNickname) localStorage.setItem("user_nickname", selectedNickname);
+
+      // 1. Save to Clerk
       await user.update({
         firstName,
         lastName,
@@ -96,58 +107,63 @@ export default function OnboardingPage() {
           ...user.unsafeMetadata,
           learningLanguage: selectedLang,
           interests: selectedInterests,
+          nickname: selectedNickname || firstName,
           onboardingComplete: true,
         },
       });
 
-      // 2. Upload avatar if chosen
-      if (avatarFile) {
-        await user.setProfileImage({ file: avatarFile });
-      }
+      // 2. Upload avatar
+      if (avatarFile) await user.setProfileImage({ file: avatarFile });
 
-      // 3. Reload Clerk user so OnboardingGuard sees updated metadata
+      // 3. Reload Clerk
       await user.reload();
 
-      // 4. Ensure the user is synced to the backend DB before calling /me
-      //    (useAuthInit may not have completed yet — race condition)
-      if (!localStorage.getItem('db_user_id')) {
+      // 4. Sync to backend DB
+      if (!localStorage.getItem("db_user_id")) {
         try {
-          const syncRes = await axiosInstance.post('/api/users/sync', {
-            email: user.primaryEmailAddress?.emailAddress ?? '',
+          const syncRes = await axiosInstance.post("/api/users/sync", {
+            email: user.primaryEmailAddress?.emailAddress ?? "",
             firstName,
             lastName,
-            pfpSource: user.imageUrl ?? '',
+            pfpSource: user.imageUrl ?? "",
+            nickname: selectedNickname || firstName,
           });
           const syncUser = syncRes.data?.data;
-          if (syncUser?.id) {
-            localStorage.setItem('db_user_id', syncUser.id.toString());
-          }
+          if (syncUser?.id) localStorage.setItem("db_user_id", syncUser.id.toString());
         } catch (syncErr) {
           console.warn("[onboarding] Pre-flight sync failed:", syncErr);
         }
       }
 
-      // 5. Sync updated profile to backend DB
+      // 5. Update profile
       try {
         await axiosInstance.put("/api/users/me", {
           firstName,
           lastName,
           learningLanguage: selectedLang,
           interests: selectedInterests,
+          nickname: selectedNickname || firstName,
         });
       } catch (syncErr) {
-        // Non-fatal — user can still use the app
-        console.warn("[onboarding] Failed to sync profile to backend:", syncErr);
+        console.warn("[onboarding] Failed to sync profile:", syncErr);
       }
 
       navigate("/home", { replace: true });
-    } catch (err) {
+    } catch (err: any) {
       setError(err?.errors?.[0]?.message || "Something went wrong. Please try again.");
       setLoading(false);
     }
   };
 
-  // ── Progress bar % ───────────────────────────────────────────────────────────
+  const goNext = () => {
+    console.log("[Onboarding] Going to step", step + 1);
+    setStep(step + 1);
+  };
+  const goBack = () => {
+    console.log("[Onboarding] Going back to step", step - 1);
+    setStep(step - 1);
+  };
+
   const progressPct = step === 0 ? 0 : Math.round((step / (STEPS.length - 1)) * 100);
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -185,10 +201,11 @@ export default function OnboardingPage() {
             <div className="flex justify-between mb-3">
               {STEPS.map((s, i) => (
                 <div key={s} className={`flex items-center gap-1.5 text-xs font-bold ${i <= step ? "text-amber-500" : "text-gray-300"}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300 ${i < step ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" :
-                      i === step ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md" :
-                        "bg-gray-100 text-gray-400"
-                    }`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300 ${
+                    i < step ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" :
+                    i === step ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md" :
+                    "bg-gray-100 text-gray-400"
+                  }`}>
                     {i < step ? "✓" : i + 1}
                   </div>
                   <span className="hidden sm:inline">{s}</span>
@@ -203,21 +220,47 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* ── Step 0: Name ── */}
+          {/* ── Step 0: Name + Nickname (inline like Google email suggestions) ── */}
           {step === 0 && (
             <div className="step-card">
               <div className="text-4xl mb-4">👋</div>
               <h2 className="text-2xl font-[900] text-gray-900 mb-1">What's your name?</h2>
-              <p className="text-sm text-gray-500 font-semibold mb-6">This is how others will see you on Sayloop.</p>
+              <p className="text-sm text-gray-500 font-semibold mb-4">
+                Type your first name — nickname suggestions appear automatically below.
+              </p>
+
               <input
                 type="text"
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Ahmed Al-Rashid"
+                onChange={(e) => {
+                  console.log("[Onboarding] Name changed:", e.target.value);
+                  setDisplayName(e.target.value);
+                  if (selectedNickname) setSelectedNickname(""); // reset nick on name change
+                }}
+                placeholder="e.g. Ahmed"
                 autoFocus
-                onKeyDown={(e) => e.key === "Enter" && canNext() && setStep(1)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-400 focus:outline-none transition text-gray-900 font-semibold text-base"
               />
+
+              {/* Inline nickname suggestions — appear after 2 chars (like Google) */}
+              {displayName.trim().length >= 2 && (
+                <NicknamePicker
+                  realName={displayName.trim().split(" ")[0]}
+                  onSelect={(nick) => {
+                    console.log("[Onboarding] Nickname selected:", nick);
+                    setSelectedNickname(nick);
+                  }}
+                />
+              )}
+
+              {selectedNickname && (
+                <div className="mt-3 bg-green-50 border-2 border-green-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                  <span className="text-green-500">✅</span>
+                  <p className="text-green-700 text-sm font-black">
+                    Ready! Nickname: <span className="underline">{selectedNickname}</span>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -229,7 +272,7 @@ export default function OnboardingPage() {
               <p className="text-sm text-gray-500 font-semibold mb-6">Put a face to the name — or skip it for now.</p>
               <div className="flex flex-col items-center gap-4">
                 <button
-                  onClick={() => fileRef.current.click()}
+                  onClick={() => fileRef.current?.click()}
                   className="avatar-btn relative w-28 h-28 rounded-full overflow-hidden border-4 border-amber-200 hover:border-amber-400 transition-all duration-200 focus:outline-none"
                   style={{ animation: "pulse-ring 2.5s ease-in-out infinite" }}
                 >
@@ -242,7 +285,7 @@ export default function OnboardingPage() {
                   </div>
                 </button>
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                <button onClick={() => fileRef.current.click()} className="text-sm font-bold text-amber-500 hover:text-amber-600 transition">
+                <button onClick={() => fileRef.current?.click()} className="text-sm font-bold text-amber-500 hover:text-amber-600 transition">
                   {avatarPreview ? "Change photo" : "Upload photo"}
                 </button>
               </div>
@@ -259,11 +302,15 @@ export default function OnboardingPage() {
                 {LANGUAGES.map((lang) => (
                   <button
                     key={lang.code}
-                    onClick={() => setSelectedLang(lang.code)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 font-bold text-sm transition-all duration-150 ${selectedLang === lang.code
+                    onClick={() => {
+                      console.log("[Onboarding] Language selected:", lang.code);
+                      setSelectedLang(lang.code);
+                    }}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 font-bold text-sm transition-all duration-150 ${
+                      selectedLang === lang.code
                         ? "border-amber-400 bg-amber-50 text-amber-700 shadow-md scale-105"
                         : "border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50/50"
-                      }`}
+                    }`}
                   >
                     <span className="text-2xl">{lang.flag}</span>
                     <span className="text-xs">{lang.label}</span>
@@ -288,10 +335,11 @@ export default function OnboardingPage() {
                     <button
                       key={interest.id}
                       onClick={() => toggleInterest(interest.id)}
-                      className={`relative text-left rounded-2xl p-4 border-2 transition-all duration-200 hover:-translate-y-0.5 ${active
+                      className={`relative text-left rounded-2xl p-4 border-2 transition-all duration-200 hover:-translate-y-0.5 ${
+                        active
                           ? "shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
                           : "bg-white border-gray-200 shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:border-amber-200"
-                        }`}
+                      }`}
                       style={active ? { background: interest.bg, borderColor: interest.border } : {}}
                     >
                       {active && (
@@ -320,7 +368,7 @@ export default function OnboardingPage() {
           <div className="flex gap-3 mt-8">
             {step > 0 && (
               <button
-                onClick={() => setStep(step - 1)}
+                onClick={goBack}
                 className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold hover:border-amber-300 transition"
               >
                 Back
@@ -328,7 +376,7 @@ export default function OnboardingPage() {
             )}
             {step < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(step + 1)}
+                onClick={goNext}
                 disabled={!canNext()}
                 className="flex-1 py-3 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold shadow-md hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -340,9 +388,10 @@ export default function OnboardingPage() {
                 disabled={!canNext() || loading}
                 className="flex-1 py-3 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white font-[900] shadow-[0_8px_22px_rgba(251,191,36,0.45)] hover:shadow-[0_12px_28px_rgba(251,191,36,0.55)] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? (
-                  <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving…</>
-                ) : "Let's go! 🚀"}
+                {loading
+                  ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving…</>
+                  : "Let's go! 🚀"
+                }
               </button>
             )}
           </div>
