@@ -10,35 +10,40 @@ const QuestPage = () => {
 
   return (
     <PageShell>
-      <div className="animate-fade-in-up mb-5 font-sans">
-        <p className="text-[#9ca3af] text-[13px] font-bold m-0 mb-0.5">Daily</p>
-        <h1 className="text-[clamp(22px,5vw,30px)] font-[900] text-[#1a1a26] m-0">Quests</h1>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800;900&display=swap');`}</style>
+      <div className="mb-5" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <p className="text-[#141414]/40 text-[13px] font-normal m-0 mb-0.5">Daily</p>
+        <h1 className="text-[clamp(22px,5vw,30px)] font-black text-[#141414] m-0" style={{ letterSpacing: '-0.5px' }}>Quests</h1>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3" style={{ fontFamily: "'Outfit', sans-serif" }}>
         {quests.map((quest) => {
           const percent = Math.round((quest.progress / quest.total) * 100);
           const done = quest.progress >= quest.total;
           return (
-            <div key={quest.id} className={`bg-white border-2 rounded-[18px] px-5 py-4 font-sans ${done ? 'border-[#fbbf24]' : 'border-[#fef3c7]'}`}>
+            <div key={quest.id} className="bg-white rounded-xl px-5 py-4"
+              style={{ border: done ? '1.5px solid rgba(61,122,92,0.35)' : '1px solid rgba(20,20,20,0.08)', boxShadow: '0 1px 4px rgba(20,20,20,0.05)' }}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-[900] text-[#1a1a26] text-[14px] m-0 mb-0.5">{quest.title}</p>
-                  <p className="font-[600] text-[#9ca3af] text-[12px] m-0">{quest.description}</p>
+                  <p className="font-black text-[#141414] text-[14px] m-0 mb-0.5">{quest.title}</p>
+                  <p className="font-normal text-[#141414]/45 text-[12px] m-0">{quest.description}</p>
                 </div>
-                <div className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-[900] ${done ? 'bg-[#fef3c7] text-[#d97706]' : 'bg-gray-100 text-gray-500'}`}>
+                <div className="shrink-0 px-3 py-1 rounded-full text-[11px] font-black"
+                  style={done
+                    ? { background: '#F0FAF4', color: '#3D7A5C', border: '1px solid rgba(61,122,92,0.22)' }
+                    : { background: 'rgba(20,20,20,0.05)', color: 'rgba(20,20,20,0.4)' }}>
                   +{quest.xp} XP
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(20,20,20,0.07)' }}>
                   <div
-                    className="h-full bg-gradient-to-r from-[#fbbf24] to-[#f97316] rounded-full transition-all duration-500"
-                    style={{ width: `${percent}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${percent}%`, background: done ? '#3D7A5C' : '#E8480C' }}
                   />
                 </div>
-                <p className="text-[11px] font-[900] text-[#9ca3af] m-0 shrink-0">
+                <p className="text-[11px] font-black text-[#141414]/35 m-0 shrink-0">
                   {quest.progress}/{quest.total}
                 </p>
               </div>

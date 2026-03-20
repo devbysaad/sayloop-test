@@ -1,6 +1,11 @@
 const prisma = require('../../config/database');
 const { setSocketRoom, initSessionForRoom, startTimerForSession } = require('../sessions/session.socket');
 
+// ─── Socket Page Tracking Maps ────────────────────────────────────────────────
+const socketPageMap = new Map(); // socketId -> pageName
+const socketUserMap = new Map(); // socketId -> dbUserId
+const userSocketsMap = new Map(); // dbUserId -> Set<socketId>
+
 // ─── In-memory readiness tracker ──────────────────────────────────────────────
 // matchId → Set<userId>  — tracks which users have clicked "Let's Go"
 const readyMap = new Map();
@@ -18,6 +23,50 @@ function registerMatchHandlers(io) {
     io.on('connection', (socket) => {
         const userId = socket.dbUserId;
         if (!userId) return;
+
+        // Track global socket connection
+        socketUserMap.set(socket.id, userId);
+        if (!userSocketsMap.has(userId)) userSocketsMap.set(userId, new Set());
+        userSocketsMap.get(userId).add(socket.id);
+
+        socket.on('disconnect', () => {
+            // Clean up page tracking
+            const prevPage = socketPageMap.get(socket.id);
+            if (prevPage) {
+                socketPageMap.delete(socket.id);
+            }
+            // Clean up user tracking
+            socketUserMap.delete(socket.id);
+            if (userSocketsMap.has(userId)) {
+                userSocketsMap.get(userId).delete(socket.id);
+                if (userSocketsMap.get(userId).size === 0) {
+                    userSocketsMap.delete(userId);
+                }
+            }
+        });
+
+        // ── page:join ───────────────────────────────────────────────────────────
+        // Emitted by the client via usePageTracking hook when they switch routes
+        socket.on('page:join', ({ page }) => {
+            const prevPage = socketPageMap.get(socket.id);
+            if (prevPage) {
+                socket.leave(`page:${prevPage}:user:${userId}`);
+                socket.leave(`page:${prevPage}`);
+            }
+            socket.join(`page:${page}:user:${userId}`);
+            socket.join(`page:${page}`);
+            socketPageMap.set(socket.id, page);
+        });
+
+        // ── page:leave ──────────────────────────────────────────────────────────
+        socket.on('page:leave', () => {
+            const prevPage = socketPageMap.get(socket.id);
+            if (prevPage) {
+                socket.leave(`page:${prevPage}:user:${userId}`);
+                socket.leave(`page:${prevPage}`);
+                socketPageMap.delete(socket.id);
+            }
+        });
 
         // ── match:confirm-ready ─────────────────────────────────────────────────
         // Fired when a user clicks "Let's Go" on the MatchFoundModal.
@@ -132,8 +181,8 @@ function registerMatchHandlers(io) {
                 // We start the timer the moment the second user joins.
                 // initSessionForRoom is idempotent — safe to call from either user.
                 const sessionSockets = await io.in(sessionId).fetchSockets();
-                const userIdsInRoom = sessionSockets.map(s => s.dbUserId).filter(Boolean);
-                console.log(`[Match] Users in room ${sessionId}:`, userIdsInRoom);
+                const userIdsInRoom = [...new Set(sessionSockets.map(s => s.dbUserId).filter(Boolean))];
+                console.log(`[Match] Unique users in room ${sessionId}:`, userIdsInRoom);
 
                 if (userIdsInRoom.length >= 2) {
                     const [uid1, uid2] = userIdsInRoom;

@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { sessionActions } from '../../redux/saga/session.saga';
-import MatchmakingScreen from '../../components/modules/sessions/MatchmakingScreen';
-import SessionScreen from '../../components/modules/sessions/sessionScreen/index';
-import ResultScreen from '../../components/modules/sessions/ResultScreen';
+import { sessionActions } from '../../../redux/saga/session.saga';
+import MatchmakingScreen from './MatchmakingScreen';
+import SessionScreen from './sessionScreen/index';
+import ResultScreen from './ResultScreen';
 
 /**
  * SessionPage — only handles ACTIVE sessions.
@@ -16,9 +16,9 @@ import ResultScreen from '../../components/modules/sessions/ResultScreen';
  * If someone lands on /session with no state (direct URL hit), redirect to /match.
  */
 const SessionPage = () => {
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { status } = useSelector((s: any) => s.session);
 
   const dbUserId = parseInt(localStorage.getItem('db_user_id') ?? '0', 10);
@@ -27,7 +27,7 @@ const SessionPage = () => {
   const locationState = location.state as {
     sessionId?: string;
     partnerId?: number;
-    topic?:     string;
+    topic?: string;
   } | null;
 
   useEffect(() => {
@@ -42,9 +42,9 @@ const SessionPage = () => {
     // the random matchmaking queue via 'find-partner'.
     if (locationState?.sessionId && status === 'idle' && dbUserId) {
       dispatch(sessionActions.joinSession({
-        userId:    dbUserId,
+        userId: dbUserId,
         sessionId: locationState.sessionId,
-        topic:     locationState.topic ?? 'General',
+        topic: locationState.topic ?? 'General',
       }));
     }
   }, []); // run once on mount

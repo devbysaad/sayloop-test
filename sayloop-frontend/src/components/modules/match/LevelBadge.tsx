@@ -1,11 +1,11 @@
 import React from 'react';
 
 const LEVELS = [
-  { min: 10000, label: 'Diamond', color: '#60a5fa', bg: '#eff6ff', icon: '💎' },
-  { min: 5000,  label: 'Gold',    color: '#f59e0b', bg: '#fffbeb', icon: '🥇' },
-  { min: 2000,  label: 'Silver',  color: '#6b7280', bg: '#f9fafb', icon: '🥈' },
-  { min: 500,   label: 'Bronze',  color: '#b45309', bg: '#fefce8', icon: '🥉' },
-  { min: 0,     label: 'Rookie',  color: '#d97706', bg: '#fffbeb', icon: '⭐' },
+  { min: 10000, label: 'Diamond', color: '#60a5fa', bg: '#EFF6FF', icon: '💎' },
+  { min: 5000, label: 'Gold', color: '#B45309', bg: '#FEF8EF', icon: '🥇' },
+  { min: 2000, label: 'Silver', color: 'rgba(20,20,20,0.5)', bg: 'rgba(20,20,20,0.05)', icon: '🥈' },
+  { min: 500, label: 'Bronze', color: '#E8480C', bg: '#FFF4EF', icon: '🥉' },
+  { min: 0, label: 'Rookie', color: '#3D7A5C', bg: '#F0FAF4', icon: '⭐' },
 ];
 
 export function getLevel(points: number) {
@@ -21,11 +21,11 @@ const LevelBadge: React.FC<Props> = ({ points, small = false }) => {
   const lvl = getLevel(points);
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full font-extrabold"
+      className="inline-flex items-center gap-1 rounded-full font-black"
       style={{
         background: lvl.bg,
         color: lvl.color,
-        border: `1.5px solid ${lvl.color}40`,
+        border: `1px solid ${lvl.color}30`,
         padding: small ? '2px 8px' : '4px 12px',
         fontSize: small ? 11 : 12,
       }}

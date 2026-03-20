@@ -36,44 +36,55 @@ const sections = [
   },
 ];
 
+const SECTION_COLORS = ['#E8480C', '#3D7A5C', '#B45309', '#141414'];
+
 const MorePage = () => {
   const navigate = useNavigate();
 
   return (
     <PageShell>
-      <div className="animate-fade-in-up mb-5 font-sans">
-        <p className="text-[#9ca3af] text-[13px] font-bold m-0 mb-0.5">All features</p>
-        <h1 className="text-[clamp(22px,5vw,30px)] font-[900] text-[#1a1a26] m-0">More</h1>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800;900&display=swap');`}</style>
+      <div className="mb-5" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <p className="text-[#141414]/40 text-[13px] font-normal m-0 mb-0.5">All features</p>
+        <h1 className="text-[clamp(22px,5vw,30px)] font-black text-[#141414] m-0" style={{ letterSpacing: '-0.5px' }}>More</h1>
       </div>
 
-      <div className="flex flex-col gap-6 font-sans">
-        {sections.map((section) => (
-          <div key={section.title}>
-            <p className="text-[#9ca3af] text-[11px] font-[900] uppercase tracking-widest mb-2 m-0">
-              {section.title}
-            </p>
-            <div className="flex flex-col gap-2">
-              {section.items.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className="bg-white border-2 border-[#fef3c7] rounded-[18px] px-5 py-4 flex items-center gap-4 text-left w-full cursor-pointer hover:border-[#fbbf24] transition-all duration-150 hover:translate-x-1"
-                >
-                  <div className="w-[42px] h-[42px] rounded-[12px] bg-[#fef3c7] flex items-center justify-center shrink-0">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#f97316]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-[900] text-[#1a1a26] text-[14px] m-0 mb-0.5">{item.label}</p>
-                    <p className="font-[600] text-[#9ca3af] text-[12px] m-0">{item.description}</p>
-                  </div>
-                  <svg className="w-4 h-4 text-[#9ca3af] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
+      <div className="flex flex-col gap-6" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        {sections.map((section, si) => {
+          const accent = SECTION_COLORS[si];
+          return (
+            <div key={section.title}>
+              <p className="text-[#141414]/40 text-[11px] font-black uppercase tracking-widest mb-2 m-0">
+                {section.title}
+              </p>
+              <div className="flex flex-col gap-2">
+                {section.items.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => navigate(item.path)}
+                    className="bg-white rounded-xl px-5 py-4 flex items-center gap-4 text-left w-full cursor-pointer transition-all duration-150 hover:translate-x-1 shadow-sm"
+                    style={{ border: '1px solid rgba(20,20,20,0.08)' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = `${accent}35`)}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(20,20,20,0.08)')}
+                  >
+                    <div className="w-[42px] h-[42px] rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${accent}12`, border: `1px solid ${accent}20` }}>
+                      <div className="w-4 h-4 rounded-full" style={{ background: accent }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-[#141414] text-[14px] m-0 mb-0.5">{item.label}</p>
+                      <p className="font-normal text-[#141414]/45 text-[12px] m-0">{item.description}</p>
+                    </div>
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      style={{ color: 'rgba(20,20,20,0.25)' }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </PageShell>
   );

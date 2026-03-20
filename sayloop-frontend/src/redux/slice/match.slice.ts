@@ -30,6 +30,7 @@ interface MatchState {
   // Incoming requests tab (User 2)
   requests: Match[];
   requestsLoading: boolean;
+  pendingRequestCount: number;
 
   // History tab
   history: Match[];
@@ -60,6 +61,7 @@ const initialState: MatchState = {
 
   requests: [],
   requestsLoading: false,
+  pendingRequestCount: 0,
 
   history: [],
   historyLoading: false,
@@ -145,10 +147,15 @@ const matchSlice = createSlice({
     },
     setRequests(state, action: PayloadAction<Match[]>) {
       state.requests = action.payload;
+      state.pendingRequestCount = action.payload.length;
       state.requestsLoading = false;
     },
     removeRequest(state, action: PayloadAction<number>) {
       state.requests = state.requests.filter(r => r.id !== action.payload);
+      state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
+    },
+    setPendingRequestCount(state, action: PayloadAction<number>) {
+      state.pendingRequestCount = action.payload;
     },
 
     // ── History ─────────────────────────────────────────────────────────────
@@ -184,7 +191,7 @@ const matchSlice = createSlice({
 export const {
   setUsersLoading, setUsers, nextCard, resetCards,
   setWaiting, setMatched, setConfirmed, cancelWaiting, clearMatched,
-  setRequestsLoading, setRequests, removeRequest,
+  setRequestsLoading, setRequests, removeRequest, setPendingRequestCount,
   setHistoryLoading, setHistory,
   setNotification, clearNotification,
   showToast, clearToast, setError,

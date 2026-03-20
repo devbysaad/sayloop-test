@@ -11,7 +11,7 @@ import { markMatchSeen } from '../../hooks/UserMatchNotification';
 import {
   setUsersLoading, setUsers, nextCard,
   setWaiting, setMatched, cancelWaiting, setConfirmed,
-  setRequestsLoading, setRequests, removeRequest,
+  setRequestsLoading, setRequests, removeRequest, setPendingRequestCount,
   setHistoryLoading, setHistory,
   setNotification,
   showToast, setError,
@@ -55,6 +55,7 @@ function createMatchEventChannel(socket: Socket) {
     socket.on('match:rejected', (d: any) => emit({ type: 'match:rejected', ...d }));
     socket.on('match:expired', (d: any) => emit({ type: 'match:expired', ...d }));
     socket.on('match:session-start', (d: any) => emit({ type: 'match:session-start', ...d }));
+    socket.on('match:badge_count', (d: any) => emit({ type: 'match:badge_count', ...d }));
 
     return () => {
       socket.off('match:request-received');
@@ -62,6 +63,7 @@ function createMatchEventChannel(socket: Socket) {
       socket.off('match:rejected');
       socket.off('match:expired');
       socket.off('match:session-start');
+      socket.off('match:badge_count');
     };
   });
 }
@@ -74,6 +76,15 @@ function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChan
       console.log('[MatchSaga] Socket event received:', event.type, event);
       switch (event.type) {
         case 'match:request-received': {
+          // Client-side guard: double check we are on the correct page
+          const SHOW_POPUP_ON = ['/match', '/home'];
+          const currentPath = window.location.pathname;
+          
+          if (!SHOW_POPUP_ON.includes(currentPath)) {
+            console.log('[MatchSaga] Ignored live popup — user is on:', currentPath);
+            break;
+          }
+
           // User 2 receives a match request in real-time
           // Build a minimal Match-like object for the notification
           const notif: any = {
@@ -138,6 +149,13 @@ function* watchMatchSocketEvents(channel: ReturnType<typeof createMatchEventChan
           }));
           break;
         }
+        case 'match:badge_count': {
+          // Received when a ping happens but user is on another page
+          if (event.pendingRequests !== undefined) {
+            yield put(setPendingRequestCount(event.pendingRequests));
+          }
+          break;
+        }
       }
     }
   } finally {
@@ -164,6 +182,12 @@ function* handleInitMatchSocket(): Generator {
     const socket: Socket = yield call(getOrCreateSocket, auth.token, auth.clerkId);
     yield call(ensureConnected, socket);
     console.log('[MatchSaga] initMatchSocket: socket connected, setting up event channel');
+
+    // Immediately send page:join for the current page since the socket just connected.
+    // (usePageTracking handles route changes, but this handles the initial connection)
+    const segment = window.location.pathname.split('/')[1];
+    const page = segment ? segment : 'landing';
+    socket.emit('page:join', { page });
 
     const channel = createMatchEventChannel(socket);
     yield fork(watchMatchSocketEvents, channel);

@@ -10,7 +10,7 @@
  */
 
 const matchesService = require('../match/match.service');
-const { calculateXP, applyXP } = require('./xpService');
+const { processSessionEconomy } = require('../economy/xp.service');
 const {
   SESSION_DURATION,
   MIC_OFF_LIMIT,
@@ -132,7 +132,7 @@ async function endSession(io, sessionId, { resignedUserId = null } = {}) {
   // Stop timer
   if (sess.timerInterval) { clearInterval(sess.timerInterval); sess.timerInterval = null; }
 
-  // Stop any mic warning intervals
+  // Stop any mic warning intervals + mark resigned user
   for (const uid of Object.keys(sess.users)) {
     const u = sess.users[uid];
     if (u.warningInterval) { clearInterval(u.warningInterval); u.warningInterval = null; }
@@ -145,40 +145,102 @@ async function endSession(io, sessionId, { resignedUserId = null } = {}) {
   const userIds = Object.keys(sess.users).map(Number);
   const [u1id, u2id] = userIds;
   const u1 = sess.users[u1id];
-  const u2 = sess.users[u2id];
+  const u2 = u2id ? sess.users[u2id] : null;
 
   const sessionDuration = Math.floor((Date.now() - sess.startedAt) / 1000);
 
-  const { xp1, xp2, breakdown1, breakdown2 } = calculateXP(
-    { id: u1id, speakingTime: u1.speakingTime, inactive: u1.inactive, resigned: u1.resigned },
-    { id: u2id, speakingTime: u2.speakingTime, inactive: u2.inactive, resigned: u2.resigned },
-    sessionDuration,
-  );
+  // ── Determine outcome ─────────────────────────────────────────────────────
+  let outcome = 'DRAW';
 
-  // Persist XP (fire-and-forget, log errors)
-  applyXP(u1id, u2id, xp1, xp2).catch((err) =>
-    console.error('[XP] Failed to persist XP:', err.message)
-  );
+  const u1Resigned = u1?.resigned || u1?.inactive;
+  const u2Resigned = u2?.resigned || u2?.inactive;
 
-  // Emit tailored session:end to each user
-  const emitEnd = (userId, xpEarned, breakdown) => {
+  if (u1Resigned && u2Resigned) {
+    outcome = 'INCOMPLETE';
+  } else if (u1Resigned) {
+    // u1 is requester (first in map), u2 is receiver
+    outcome = 'RESIGN_REQUESTER';
+  } else if (u2Resigned) {
+    outcome = 'RESIGN_RECEIVER';
+  } else if (sessionDuration < 30) {
+    // Short session — no winner, no loser
+    outcome = 'INCOMPLETE';
+  } else {
+    // Time-based win: whoever spoke more wins
+    if (u1.speakingTime > u2.speakingTime) {
+      outcome = 'WIN_REQUESTER';
+    } else if (u2.speakingTime > u1.speakingTime) {
+      outcome = 'WIN_RECEIVER';
+    } else {
+      outcome = 'DRAW';
+    }
+  }
+
+  console.log(`[Session] Ended sessionId=${sessionId} outcome=${outcome} duration=${sessionDuration}s`);
+
+  // ── Find the matchId from sessionId ──────────────────────────────────────
+  let matchId = null;
+  try {
+    const prisma = require('../../config/database');
+    const match = await prisma.match.findFirst({
+      where: { sessionId },
+      select: { id: true },
+    });
+    if (match) {
+      matchId = match.id;
+      // Update match outcome if not INCOMPLETE
+      if (outcome !== 'INCOMPLETE') {
+        await prisma.match.update({
+          where: { id: matchId },
+          data: { outcome, xpAwarded: true, status: 'COMPLETED' },
+        });
+      }
+    }
+  } catch (dbErr) {
+    console.error('[Session] Match DB update failed:', dbErr.message);
+  }
+
+  // ── Process economy (XP, gems, streaks, level-ups) ────────────────────────
+  let economyResults = null;
+  if (outcome !== 'INCOMPLETE') {
+    try {
+      economyResults = await processSessionEconomy(u1id, u2id, outcome, matchId, io);
+    } catch (econErr) {
+      console.error('[Economy] processSessionEconomy failed:', econErr.message);
+    }
+  }
+
+  // ── Emit session:end + economy:update to each user ────────────────────────
+  const emitToUser = (userId, socketId, resigned) => {
     const ud = sess.users[userId];
     if (!ud) return;
-    io.to(ud.socketId).emit('session:end', {
+
+    // Basic session result
+    io.to(socketId).emit('session:end', {
       sessionDuration,
-      xpEarned,
-      breakdown,
+      outcome,
+      resigned,
       speakingTime: ud.speakingTime,
-      resigned: ud.resigned,
     });
+
+    // Economy update (if processed successfully)
+    if (economyResults) {
+      const isRequester = userId === u1id;
+      const economyData = isRequester ? economyResults.requester : economyResults.receiver;
+
+      // Emit to user's private room (user:{id}) so it reaches all their sockets
+      io.to(`user:${userId}`).emit('economy:update', {
+        ...economyData,
+        outcome,
+        sessionDuration,
+      });
+    }
   };
 
-  emitEnd(u1id, xp1, breakdown1);
-  emitEnd(u2id, xp2, breakdown2);
+  if (u1id && u1) emitToUser(u1id, u1.socketId, u1Resigned);
+  if (u2id && u2) emitToUser(u2id, u2.socketId, u2Resigned);
 
-  console.log(`[Session] Ended sessionId=${sessionId} xp1=${xp1} xp2=${xp2} duration=${sessionDuration}s`);
-
-  // Clean up after a short delay (allow clients to receive the event)
+  // Clean up after a short delay (allow clients to receive events)
   setTimeout(() => sessionState.delete(sessionId), 5000);
 }
 

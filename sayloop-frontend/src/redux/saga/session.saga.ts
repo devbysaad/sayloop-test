@@ -15,6 +15,8 @@ import {
   setTimer, setMicWarning, clearMicWarning,
   addXpPopup, removeXpPopup, tickSpeaking,
 } from '../slice/session.slice';
+import { applyEconomyUpdate, FETCH_ECONOMY } from '../slice/economy.slice';
+
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 export const sessionActions = {
@@ -52,19 +54,21 @@ function createSocketChannel(socket: Socket) {
     socket.on('partner-disconnected', ()     => { emit({ type: 'partner-disconnected' }); emit(END); });
 
     // ── New events ──────────────────────────────────────────────────────────
-    socket.on('session:start',   (d: any) => emit({ type: 'session:start', ...d }));
-    socket.on('timer:update',    (d: any) => emit({ type: 'timer:update', secondsLeft: d.secondsLeft }));
-    socket.on('session:end',     (d: any) => emit({ type: 'session:end', ...d }));
-    socket.on('mic:warning',     (d: any) => emit({ type: 'mic:warning', secondsLeft: d.secondsLeft }));
-    socket.on('mic:warning:cleared', ()   => emit({ type: 'mic:warning:cleared' }));
-    socket.on('user:resigned',   (d: any) => emit({ type: 'user:resigned', ...d }));
+    socket.on('session:start',      (d: any) => emit({ type: 'session:start', ...d }));
+    socket.on('timer:update',        (d: any) => emit({ type: 'timer:update', secondsLeft: d.secondsLeft }));
+    socket.on('session:end',         (d: any) => emit({ type: 'session:end', ...d }));
+    socket.on('mic:warning',         (d: any) => emit({ type: 'mic:warning', secondsLeft: d.secondsLeft }));
+    socket.on('mic:warning:cleared', ()       => emit({ type: 'mic:warning:cleared' }));
+    socket.on('user:resigned',       (d: any) => emit({ type: 'user:resigned', ...d }));
+    socket.on('economy:update',      (d: any) => emit({ type: 'economy:update', ...d }));
 
     return () => {
       [
         'connect', 'connect_error', 'waiting', 'matched', 'session-joined', 'partner-joined',
         'chat-message', 'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
         'opponent-resigned', 'partner-disconnected', 'session-error',
-        'session:start', 'timer:update', 'session:end', 'mic:warning', 'mic:warning:cleared', 'user:resigned',
+        'session:start', 'timer:update', 'session:end', 'mic:warning', 'mic:warning:cleared',
+        'user:resigned', 'economy:update',
       ].forEach(ev => socket.off(ev));
     };
   });
@@ -138,12 +142,12 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
 
         case 'session:end': {
           // Show XP popups for each breakdown item
-          const { xpEarned, breakdown = [], speakingTime, sessionDuration } = event;
+          const { xpEarned, breakdown = [], speakingTime, sessionDuration, outcome } = event;
           if (xpEarned > 0) {
             yield fork(spawnXpPopup, xpEarned, `+${xpEarned} XP earned!`);
           }
           yield put(setResult({
-            outcome: 'time_up',
+            outcome: outcome || 'time_up',
             winnerId: null,
             xpEarned: xpEarned ?? 0,
             breakdown: breakdown,
@@ -170,6 +174,24 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
               xpEarned: -15,
               breakdown: ['Auto-resigned (mic inactive) — -15 XP penalty'],
             }));
+          }
+          break;
+
+        case 'economy:update':
+          // Live economy update after session ends — update XP, gems, level, streak in Redux
+          yield put(applyEconomyUpdate({
+            xpChange:   event.xpChange ?? 0,
+            newXP:      event.newXP ?? 0,
+            newGems:    event.newGems ?? 0,
+            newLevel:   event.newLevel ?? 1,
+            newStreak:  event.newStreak ?? 0,
+            levelledUp: event.levelledUp ?? false,
+            gemsEarned: event.gemsEarned ?? 0,
+            reason:     event.reason ?? '',
+          }));
+          // Show XP popup in the session screen if positive
+          if ((event.xpChange ?? 0) > 0) {
+            yield fork(spawnXpPopup, event.xpChange, event.reason ?? 'Session bonus');
           }
           break;
       }

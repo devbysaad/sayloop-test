@@ -11,6 +11,9 @@
 import { useEffect, useRef } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import axiosInstance, { setTokenGetter } from '../lib/axiosInstance';
+import { store } from '../redux/store';
+import { FETCH_ECONOMY } from '../redux/slice/economy.slice';
+import { matchActions } from '../redux/saga/match.saga';
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 1500;
@@ -72,6 +75,14 @@ export const useAuthInit = () => {
         syncedRef.current = true;
         retryCountRef.current = 0;
         console.log('[useAuthInit] User synced successfully:', dbUser?.id);
+
+        // Fetch initial economy state (XP, gems, level, streak)
+        store.dispatch({ type: FETCH_ECONOMY });
+        
+        // Fetch pending match requests to populate the nav badge
+        if (dbUser?.id) {
+          store.dispatch(matchActions.loadRequests({ userId: dbUser.id }));
+        }
       } catch (err) {
         console.error('[useAuthInit] Failed to sync user:', err);
 

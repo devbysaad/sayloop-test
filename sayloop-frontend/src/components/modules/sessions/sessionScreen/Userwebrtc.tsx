@@ -60,6 +60,7 @@ export const useWebRTC = (
   const [canOfferDraw, setCanOfferDraw] = useState(true);
   const [drawCooldownSec, setDrawCooldownSec] = useState(0);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const partnerSocketIdRef = useRef<string | null>(null);
 
   const startDrawCooldown = useCallback(() => {
     setCanOfferDraw(false);
@@ -112,9 +113,9 @@ export const useWebRTC = (
 
     pc.onicecandidate = event => {
       if (!event.candidate) return;
-      const partner = sessionRef.current.partner;
-      if (partner?.socketId) {
-        socket?.emit('ice-candidate', { candidate: event.candidate, to: partner.socketId });
+      const partnerId = partnerSocketIdRef.current || sessionRef.current.partner?.socketId;
+      if (partnerId) {
+        socket?.emit('ice-candidate', { candidate: event.candidate, to: partnerId });
       }
     };
 
@@ -186,10 +187,11 @@ export const useWebRTC = (
 
     const onOffer = async ({ offer, from }: { offer: RTCSessionDescriptionInit; from: string }) => {
       console.log('[WebRTC] Received offer from', from);
+      partnerSocketIdRef.current = from;
 
-      // Wait for pcRef to be set
+      // Wait for pcRef to be set (camera permissions can take several seconds)
       let attempts = 0;
-      while (!pcRef.current && attempts < 30) {
+      while (!pcRef.current && attempts < 150) { // 15 seconds
         await new Promise(r => setTimeout(r, 100));
         attempts++;
       }
@@ -257,6 +259,7 @@ export const useWebRTC = (
       pcRef.current?.close();
       if (cooldownRef.current) clearInterval(cooldownRef.current);
       iceCandidateBuffer.current = [];
+      partnerSocketIdRef.current = null;
     };
   }, []);
 

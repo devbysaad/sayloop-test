@@ -7,14 +7,16 @@ import leaderboardReducer from './slice/leaderboard.slice';
 import profileReducer from './slice/profile.slice';
 import sessionReducer from './slice/session.slice';
 import partnersReducer from './slice/partner.slice';
-import matchReducer from './slice/match.slice'; // ← added
+import matchReducer from './slice/match.slice';
+import economyReducer from './slice/economy.slice';
 
 // ── Sagas ───────────────────────────────────────────────────────────────────
 import { leaderboardSaga } from './saga/leaderboard.saga';
 import { profileSaga } from './saga/profile.saga';
 import sessionSaga from './saga/session.saga';
 import { partnersSaga } from './saga/partner.saga';
-import matchSaga from './saga/match.saga'; // ← added
+import matchSaga from './saga/match.saga';
+import { economySaga } from './saga/economy.saga';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Root saga
@@ -25,7 +27,8 @@ function* rootSaga() {
     fork(profileSaga),
     fork(sessionSaga),
     fork(partnersSaga),
-    fork(matchSaga), // ← added
+    fork(matchSaga),
+    fork(economySaga),
   ]);
 }
 
@@ -43,7 +46,8 @@ export const store = configureStore({
     profile: profileReducer,
     session: sessionReducer,
     partners: partnersReducer,
-    match: matchReducer, // ← added
+    match: matchReducer,
+    economy: economyReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }).concat(sagaMiddleware),

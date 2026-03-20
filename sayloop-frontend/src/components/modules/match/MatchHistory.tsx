@@ -1,6 +1,6 @@
 import React from 'react';
 import UserAvatar from './UserAvatar';
-import type { Match } from  '../../../lib/matchApi';
+import type { Match } from '../../../lib/matchApi';
 import { HistoryRowSkeleton } from '../../ui/SkeletonCard';
 
 interface Props {
@@ -9,17 +9,17 @@ interface Props {
   myUserId: number;
 }
 
-const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
-  completed: { label: 'Completed', cls: 'bg-green-100 text-green-700' },
-  rejected:  { label: 'Declined',  cls: 'bg-red-100 text-red-500'    },
-  expired:   { label: 'Expired',   cls: 'bg-gray-100 text-gray-500'  },
-  accepted:  { label: 'Active',    cls: 'bg-blue-100 text-blue-600'  },
-  pending:   { label: 'Pending',   cls: 'bg-amber-100 text-amber-600'},
+const STATUS_STYLE: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  completed: { label: 'Completed', bg: '#F0FAF4', color: '#3D7A5C', border: 'rgba(61,122,92,0.22)' },
+  rejected: { label: 'Declined', bg: '#FFF4EF', color: '#E8480C', border: 'rgba(232,72,12,0.2)' },
+  expired: { label: 'Expired', bg: 'rgba(20,20,20,0.05)', color: 'rgba(20,20,20,0.4)', border: 'rgba(20,20,20,0.1)' },
+  accepted: { label: 'Active', bg: '#EFF6FF', color: '#2563eb', border: '#bfdbfe' },
+  pending: { label: 'Pending', bg: '#FEF8EF', color: '#B45309', border: 'rgba(180,83,9,0.2)' },
 };
 
 const TOPIC_EMOJI: Record<string, string> = {
-  daily_life:'☀️', travel:'✈️', food:'🍜', movies:'🎬', tech:'💻',
-  sports:'⚽', books:'📚', science:'🔬', business:'💼', art:'🎨', gaming:'🎮', health:'🏃',
+  daily_life: '☀️', travel: '✈️', food: '🍜', movies: '🎬', tech: '💻',
+  sports: '⚽', books: '📚', science: '🔬', business: '💼', art: '🎨', gaming: '🎮', health: '🏃',
 };
 
 const MatchHistory: React.FC<Props> = ({ history, loading, myUserId }) => {
@@ -32,8 +32,8 @@ const MatchHistory: React.FC<Props> = ({ history, loading, myUserId }) => {
   if (history.length === 0) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="text-6xl mb-4">📜</div>
-      <p className="text-gray-500 font-bold text-lg">No history yet</p>
-      <p className="text-gray-400 text-sm mt-1">Your past debate requests will appear here.</p>
+      <p className="font-black text-[#141414] text-lg" style={{ letterSpacing: '-0.3px' }}>No history yet</p>
+      <p className="text-sm font-normal mt-1" style={{ color: 'rgba(20,20,20,0.45)' }}>Your past debate requests will appear here.</p>
     </div>
   );
 
@@ -45,24 +45,26 @@ const MatchHistory: React.FC<Props> = ({ history, loading, myUserId }) => {
         const style = STATUS_STYLE[m.status] ?? STATUS_STYLE.expired;
 
         return (
-          <div key={m.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
+          <div key={m.id} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3"
+            style={{ border: '1px solid rgba(20,20,20,0.08)' }}>
             <UserAvatar user={partner} size={44} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-extrabold text-gray-900">{partner.firstName}</p>
-                <span className="text-xs">
+                <p className="font-black text-[#141414]" style={{ letterSpacing: '-0.2px' }}>{partner.firstName}</p>
+                <span className="text-[11px] font-normal" style={{ color: 'rgba(20,20,20,0.4)' }}>
                   {isRequester ? '→ You sent' : '← They sent'}
                 </span>
               </div>
-              <p className="text-gray-500 text-sm font-semibold">
+              <p className="text-sm font-normal" style={{ color: 'rgba(20,20,20,0.5)' }}>
                 {TOPIC_EMOJI[m.topic] ?? '💬'} {m.topic.replace('_', ' ')}
               </p>
             </div>
             <div className="text-right flex flex-col items-end gap-1">
-              <span className={`text-xs font-extrabold rounded-full px-2.5 py-1 ${style.cls}`}>
+              <span className="text-[11px] font-black rounded-full px-2.5 py-1"
+                style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}>
                 {style.label}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-[11px] font-normal" style={{ color: 'rgba(20,20,20,0.35)' }}>
                 {new Date(m.createdAt).toLocaleDateString()}
               </span>
             </div>

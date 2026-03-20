@@ -16,7 +16,7 @@ const TOPIC_EMOJI: Record<string, string> = {
 const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
   const [seconds, setSeconds] = useState(0);
   const [dots, setDots] = useState('');
-  const [xpPops, setXpPops] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [xpPops, setXpPops] = useState<{ id: number; x: number }[]>([]);
 
   useEffect(() => {
     const t = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
@@ -28,11 +28,10 @@ const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
     return () => clearInterval(t);
   }, []);
 
-  // Random floating speech bubbles
   useEffect(() => {
     const t = setInterval(() => {
       const id = Date.now();
-      setXpPops(prev => [...prev.slice(-4), { id, x: Math.random() * 80 + 10, y: -20 }]);
+      setXpPops(prev => [...prev.slice(-4), { id, x: Math.random() * 80 + 10 }]);
       setTimeout(() => setXpPops(prev => prev.filter(p => p.id !== id)), 2500);
     }, 1800);
     return () => clearInterval(t);
@@ -41,98 +40,91 @@ const WaitingScreen = ({ partner, topic, onCancel }: Props) => {
   return (
     <>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800;900&display=swap');
         @keyframes floatUp {
-          0% { opacity:0; transform: translateY(0) scale(0.8); }
-          30% { opacity:1; transform: translateY(-20px) scale(1.1); }
-          100% { opacity:0; transform: translateY(-80px) scale(0.9); }
+          0%   { opacity:0; transform:translateY(0) scale(0.8); }
+          30%  { opacity:1; transform:translateY(-20px) scale(1.1); }
+          100% { opacity:0; transform:translateY(-80px) scale(0.9); }
         }
         .xp-float { animation: floatUp 2.5s ease-out forwards; }
         @keyframes pulseBig {
-          0%,100% { transform: scale(1); opacity:0.2; }
-          50% { transform: scale(1.3); opacity:0.4; }
+          0%,100% { transform:scale(1); opacity:0.15; }
+          50%     { transform:scale(1.3); opacity:0.3; }
         }
         .pulse-ring1 { animation: pulseBig 1.8s ease-in-out infinite; }
         .pulse-ring2 { animation: pulseBig 1.8s ease-in-out 0.6s infinite; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
       `}</style>
-      <div className="min-h-screen bg-[#fffbf5] flex flex-col items-center justify-center px-6 relative overflow-hidden"
-        style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden"
+        style={{ background: '#F8F5EF', fontFamily: "'Outfit', sans-serif" }}>
 
-        {/* Background dot grid */}
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle, #FF6B35 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-        {/* Floating XP pop-ups */}
         {xpPops.map(p => (
-          <div key={p.id} className="xp-float absolute text-sm font-black text-orange-500 pointer-events-none z-20"
-            style={{ left: `${p.x}%`, bottom: '40%' }}>
+          <div key={p.id} className="xp-float absolute text-sm font-black pointer-events-none z-20"
+            style={{ left: `${p.x}%`, bottom: '40%', color: '#3D7A5C' }}>
             💬 chat!
           </div>
         ))}
 
-        {/* Pulsing rings */}
         <div className="relative mb-10">
-          <div className="pulse-ring1 absolute inset-0 rounded-full scale-150" style={{ background: 'radial-gradient(circle,#FF6B35,transparent)', opacity:0.2 }} />
-          <div className="pulse-ring2 absolute inset-0 rounded-full scale-[1.75]" style={{ background: 'radial-gradient(circle,#FFC857,transparent)', opacity:0.15 }} />
+          <div className="pulse-ring1 absolute inset-0 rounded-full scale-150"
+            style={{ background: 'radial-gradient(circle,#E8480C,transparent)', opacity: 0.15 }} />
+          <div className="pulse-ring2 absolute inset-0 rounded-full scale-[1.75]"
+            style={{ background: 'radial-gradient(circle,#B45309,transparent)', opacity: 0.1 }} />
           <div className="relative z-10">
             <UserAvatar user={partner} size={96} />
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-lg border-2 border-white shadow-lg"
-              style={{ background: 'linear-gradient(135deg,#FF6B35,#FFC857)' }}>⏳</div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-lg border-2 border-[#F8F5EF] shadow-sm"
+              style={{ background: '#E8480C' }}>⏳</div>
           </div>
         </div>
 
-        {/* Title */}
-        <h2 className="font-black text-3xl text-gray-800 mb-2 text-center">
+        <h2 className="font-black text-3xl text-[#141414] mb-2 text-center" style={{ letterSpacing: '-0.5px' }}>
           Waiting for {partner.firstName}{dots}
         </h2>
-        <p className="text-gray-400 font-semibold text-sm mb-6 text-center max-w-xs leading-relaxed">
+        <p className="font-normal text-sm mb-6 text-center max-w-xs leading-relaxed" style={{ color: 'rgba(20,20,20,0.45)' }}>
           Almost there... they're warming up their English! 🔥 You'll be notified the second they accept.
         </p>
 
-        {/* Topic chip */}
-        <div className="flex items-center gap-2 bg-orange-50 border-2 border-orange-200 rounded-full px-5 py-2.5 mb-8">
+        <div className="flex items-center gap-2 rounded-full px-5 py-2.5 mb-8"
+          style={{ background: '#FFF4EF', border: '1px solid rgba(232,72,12,0.2)' }}>
           <span className="text-xl">{TOPIC_EMOJI[topic] ?? '💬'}</span>
-          <span className="text-orange-700 font-black text-sm capitalize">{topic.replace('_', ' ')}</span>
-          <span className="text-orange-400 text-xs font-bold">+25 XP</span>
+          <span className="font-black text-sm capitalize" style={{ color: '#E8480C' }}>{topic.replace('_', ' ')}</span>
+          <span className="text-xs font-medium" style={{ color: 'rgba(232,72,12,0.6)' }}>+25 XP</span>
         </div>
 
         {/* Partner card */}
-        <div className="w-full max-w-sm bg-white rounded-3xl border-2 border-orange-100 shadow-xl p-5 mb-8">
+        <div className="w-full max-w-sm bg-white rounded-2xl p-5 mb-8 shadow-sm"
+          style={{ border: '1px solid rgba(20,20,20,0.08)' }}>
           <div className="flex items-center gap-3 mb-4">
             <UserAvatar user={partner} size={44} />
             <div className="flex-1">
-              <p className="font-black text-gray-900">{partner.firstName}</p>
-              <p className="text-gray-400 text-xs font-semibold">@{partner.username}</p>
+              <p className="font-black text-[#141414]">{partner.firstName}</p>
+              <p className="text-[12px] font-normal" style={{ color: 'rgba(20,20,20,0.4)' }}>@{partner.username}</p>
             </div>
-            <div className="text-right bg-yellow-50 border border-yellow-200 rounded-xl px-2.5 py-1.5">
-              <p className="font-black text-gray-800 text-sm">{partner.points.toLocaleString()}</p>
-              <p className="text-yellow-600 text-[10px] font-black">⚡ XP</p>
+            <div className="text-right rounded-xl px-2.5 py-1.5" style={{ background: '#FEF8EF', border: '1px solid rgba(180,83,9,0.2)' }}>
+              <p className="font-black text-[#141414] text-sm">{partner.points.toLocaleString()}</p>
+              <p className="text-[10px] font-black" style={{ color: '#B45309' }}>⚡ XP</p>
             </div>
           </div>
-          {/* Listening animation */}
-          <div className="bg-orange-50 rounded-2xl p-3 flex items-center gap-3">
+          <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: '#F0FAF4', border: '1px solid rgba(61,122,92,0.2)' }}>
             <div className="flex gap-1">
               {[0, 1, 2].map(i => (
-                <div key={i} className="w-2.5 h-2.5 rounded-full bg-orange-400"
-                  style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                <div key={i} className="w-2.5 h-2.5 rounded-full"
+                  style={{ background: '#3D7A5C', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
               ))}
             </div>
-            <p className="text-orange-600 font-bold text-xs">Listening for their response…</p>
+            <p className="text-xs font-medium" style={{ color: '#3D7A5C' }}>Listening for their response…</p>
           </div>
         </div>
 
-        <p className="text-gray-300 text-xs font-bold mb-8">{seconds}s elapsed</p>
+        <p className="text-xs font-normal mb-8" style={{ color: 'rgba(20,20,20,0.25)' }}>{seconds}s elapsed</p>
 
         <button onClick={onCancel}
-          className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors hover:underline">
+          className="text-sm font-medium transition-colors hover:underline"
+          style={{ color: 'rgba(20,20,20,0.4)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#E8480C')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(20,20,20,0.4)')}>
           Cancel request ✕
         </button>
-
-        <style>{`
-          @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50%       { transform: translateY(-7px); }
-          }
-        `}</style>
       </div>
     </>
   );
