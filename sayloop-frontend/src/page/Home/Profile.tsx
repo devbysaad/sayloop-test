@@ -6,7 +6,7 @@ import type { RootState } from '../../redux/store';
 import { fetchProfileStatsRequest } from '../../redux/slice/profile.slice';
 import { fetchUserRankRequest } from '../../redux/slice/leaderboard.slice';
 import PageShell from '../../components/modules/home/PageShell';
-import ProfileHeroCard from '../../components/modules/profile/profileherocard';
+import ProfileHeroCard from '../../components/modules/profile/ProfileHeroCard';
 import ProfileTabs, { type Tab } from '../../components/modules/profile/ProfileTab';
 import ProfileStatsTab from '../../components/modules/profile/ProfileStatsTab';
 import ProfileAchievementsTab from '../../components/modules/profile/ProfileAchievementsTab';

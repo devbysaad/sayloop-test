@@ -93,7 +93,7 @@ const SessionScreen = ({ userId }: Props) => {
 
   // Chat
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatTab, setChatTab] = useState<'chat' | 'debate'>('chat');
+  const [chatTab, setChatTab] = useState<'chat' | 'panel' | 'debate'>('chat');
   const [msgInput, setMsgInput] = useState('');
   const [argInput, setArgInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
