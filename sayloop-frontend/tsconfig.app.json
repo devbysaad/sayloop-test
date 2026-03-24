@@ -16,13 +16,26 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases — must mirror vite.config.ts resolve.alias */
+    "baseUrl": ".",
+    "paths": {
+      "@/*":           ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@pages/*":      ["./src/page/*"],
+      "@redux/*":      ["./src/redux/*"],
+      "@hooks/*":      ["./src/hooks/*"],
+      "@constants/*": ["./src/constants/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": false
+    "noUncheckedSideEffectImports": false,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true
   },
   "include": ["src"]
 }

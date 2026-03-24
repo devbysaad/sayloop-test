@@ -4,7 +4,7 @@ import { useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../redux/store';
 import { fetchProfileStatsRequest } from '../../redux/slice/profile.slice';
-import { fetchUserRankRequest } from '../../redux/slice/leaderboard.slice';
+import { fetchUserRankRequest, type UserRank } from '../../redux/slice/leaderboard.slice';
 import PageShell from '../../components/modules/home/PageShell';
 import ProfileHeroCard from '../../components/modules/profile/ProfileHeroCard';
 import ProfileTabs, { type Tab } from '../../components/modules/profile/ProfileTab';
@@ -65,12 +65,13 @@ const ProfilePage = () => {
     </PageShell>
   );
 
-  const points = profileStats?.points ?? 0;
-  const streak = profileStats?.streakLength ?? (userRank as any)?.streakLength ?? 0;
-  const rank = profileStats?.rank ?? (userRank as any)?.rank ?? '—';
+  const points   = profileStats?.points ?? 0;
+  const typedRank = userRank as UserRank | null;
+  const streak   = profileStats?.streakLength ?? typedRank?.streakLength ?? 0;
+  const rank     = profileStats?.rank ?? typedRank?.rank ?? '—';
   const accuracy = profileStats?.accuracy ?? 0;
-  const lessons = profileStats?.lessonsCompleted ?? 0;
-  const league = getLeague(points);
+  const lessons  = profileStats?.lessonsCompleted ?? 0;
+  const league   = getLeague(points);
 
   const achievements = [
     { icon: '🎙️', title: 'First Conversation', desc: 'Completed your first live session', done: true },

@@ -7,6 +7,11 @@
  *
  * Fix 2: Added retry with back-off when getToken() returns null
  * (common during OAuth redirect — Clerk session isn't ready yet).
+ *
+ * Fix 3: tokenGetterSetRef guard prevents setTokenGetter from being
+ * called multiple times under React StrictMode double-invoke or when
+ * Clerk internally recreates the getToken function reference (which
+ * causes the effect to re-run because getToken is in the dep array).
  */
 import { useEffect, useRef } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
@@ -23,6 +28,11 @@ export const useAuthInit = () => {
   const { getToken } = useAuth();
   const syncedRef = useRef(false);
   const retryCountRef = useRef(0);
+  // Guard: setTokenGetter should fire at most once per app session.
+  // Without this, React StrictMode's double-invoke or Clerk internally
+  // recreating `getToken` (new function ref each render) causes the
+  // effect to re-run and overwrite the token getter repeatedly.
+  const tokenGetterSetRef = useRef(false);
 
   useEffect(() => {
     // Wait until Clerk is fully loaded and user is signed in
@@ -35,8 +45,11 @@ export const useAuthInit = () => {
 
     const init = async () => {
       try {
-        // 1. Wire up token getter FIRST — before any API call
-        setTokenGetter(() => getToken());
+        // 1. Wire up token getter FIRST — but only once across all re-runs
+        if (!tokenGetterSetRef.current) {
+          setTokenGetter(() => getToken());
+          tokenGetterSetRef.current = true;
+        }
 
         // 2. Verify we can actually get a token before calling the API
         const token = await getToken();
@@ -107,5 +120,8 @@ export const useAuthInit = () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [isLoaded, isSignedIn, user, getToken]);
-};
+  }, [isLoaded, isSignedIn, user]); // ← getToken intentionally removed from deps.
+  // getToken's identity changes on every render (Clerk internals), which
+  // caused the effect to re-run and overwrite tokenGetter on each cycle.
+  // The ref guard above is the safe alternative.
+};

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { matchActions } from '../../redux/saga/match.saga';
@@ -14,9 +14,14 @@ import { SwipeCardSkeleton } from '../../components/ui/SkeletonCard';
 type Tab = 'browse' | 'requests' | 'history';
 
 // ── Auto-retry searching component ────────────────────────────────────────────
-// Shown when no users are left — keeps polling every 8s without a button.
+// Shown when no users are left — polls every 4 seconds for new users.
 const AutoRetrySearching = ({ onRetry }: { onRetry: () => void }) => {
   const [dots, setDots] = useState('');
+  // Store onRetry in a ref so the interval callback always calls the latest
+  // version without needing onRetry in the useEffect deps (which caused
+  // 2-7x/sec re-renders because dispatch identity changes on every render).
+  const onRetryRef = useRef(onRetry);
+  onRetryRef.current = onRetry;
 
   useEffect(() => {
     const dotsTimer = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
@@ -24,11 +29,11 @@ const AutoRetrySearching = ({ onRetry }: { onRetry: () => void }) => {
   }, []);
 
   useEffect(() => {
-    // Immediately retry, then repeat every 3 seconds
-    onRetry();
-    const retryTimer = setInterval(onRetry, 3000);
+    // Fire once immediately, then every 4 seconds
+    onRetryRef.current();
+    const retryTimer = setInterval(() => onRetryRef.current(), 4000);
     return () => clearInterval(retryTimer);
-  }, [onRetry]);
+  }, []); // ← no deps: runs once on mount, cleans up on unmount
 
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
