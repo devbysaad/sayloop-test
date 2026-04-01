@@ -73,6 +73,9 @@ interface SessionState {
   // ── XP system ──────────────────────────────────────────────────────────────
   xpPopups: XpPopup[];             // transient popups (auto-dismissed)
   speakingSeconds: number;         // local tracker for UI feedback only
+
+  // ── Emoji reactions ────────────────────────────────────────────────────────
+  partnerEmoji: string | null;     // last emoji received from partner (transient)
 }
 
 const initialState: SessionState = {
@@ -91,6 +94,7 @@ const initialState: SessionState = {
   micWarning: null,
   xpPopups: [],
   speakingSeconds: 0,
+  partnerEmoji: null,
 };
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
@@ -210,6 +214,11 @@ const sessionSlice = createSlice({
       state.speakingSeconds += 1;
     },
 
+    // ── Emoji reactions ───────────────────────────────────────────────────────
+    setPartnerEmoji(state, action: PayloadAction<string | null>) {
+      state.partnerEmoji = action.payload;
+    },
+
     resetSession() {
       return initialState;
     },
@@ -235,6 +244,7 @@ export const {
   addXpPopup,
   removeXpPopup,
   tickSpeaking,
+  setPartnerEmoji,
   resetSession,
 } = sessionSlice.actions;
 

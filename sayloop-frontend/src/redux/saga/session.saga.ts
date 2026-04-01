@@ -14,6 +14,7 @@ import {
   updatePartnerSocketId,
   setTimer, setMicWarning, clearMicWarning,
   addXpPopup, removeXpPopup, tickSpeaking,
+  setPartnerEmoji,
 } from '../slice/session.slice';
 import { applyEconomyUpdate, FETCH_ECONOMY } from '../slice/economy.slice';
 
@@ -61,6 +62,7 @@ function createSocketChannel(socket: Socket) {
     socket.on('mic:warning:cleared', ()       => emit({ type: 'mic:warning:cleared' }));
     socket.on('user:resigned',       (d: any) => emit({ type: 'user:resigned', ...d }));
     socket.on('economy:update',      (d: any) => emit({ type: 'economy:update', ...d }));
+    socket.on('emoji:react',         (d: any) => emit({ type: 'emoji:react', emoji: d.emoji }));
 
     return () => {
       [
@@ -68,7 +70,7 @@ function createSocketChannel(socket: Socket) {
         'chat-message', 'debate-argument', 'draw-received', 'draw-declined', 'draw-accepted',
         'opponent-resigned', 'partner-disconnected', 'session-error',
         'session:start', 'timer:update', 'session:end', 'mic:warning', 'mic:warning:cleared',
-        'user:resigned', 'economy:update',
+        'user:resigned', 'economy:update', 'emoji:react',
       ].forEach(ev => socket.off(ev));
     };
   });
@@ -193,6 +195,11 @@ function* watchSocketEvents(channel: ReturnType<typeof createSocketChannel>): Ge
           if ((event.xpChange ?? 0) > 0) {
             yield fork(spawnXpPopup, event.xpChange, event.reason ?? 'Session bonus');
           }
+          break;
+
+        case 'emoji:react':
+          // Partner sent an emoji — set it in Redux, SessionScreen clears it after 2.5s
+          yield put(setPartnerEmoji(event.emoji ?? null));
           break;
       }
     }

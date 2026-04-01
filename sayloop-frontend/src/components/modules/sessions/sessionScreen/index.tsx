@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { sessionActions } from '../../../../redux/saga/session.saga';
+import { getSocket } from '../../../../redux/service/socket.service';
 import { useWebRTC } from './Userwebrtc';
 import DrawBanner from './Drawbanner';
 import ResignModal from './Resignmodal';
@@ -84,9 +85,27 @@ const SessionScreen = ({ userId }: Props) => {
     return () => clearInterval(id);
   }, [rtc.muted]);
 
-  // Reaction
+  // ── Emoji reaction ─────────────────────────────────────────────────────────
   const [reaction, setReaction] = useState<string | null>(null);
-  const handleReaction = (e: string) => { setReaction(e); setTimeout(() => setReaction(null), 2500); };
+  const [partnerReaction, setPartnerReaction] = useState<string | null>(null);
+
+  // Emit to partner via socket AND show locally
+  const handleReaction = (e: string) => {
+    setReaction(e);
+    setTimeout(() => setReaction(null), 2500);
+    // Emit to backend — backend will broadcast emoji:react to the room partner
+    const socket = getSocket();
+    if (socket?.connected) socket.emit('emoji:react', { emoji: e });
+  };
+
+  // Listen for partner's emoji reactions via Redux (saga forwards them)
+  const { partnerEmoji } = useSelector((s: any) => s.session);
+  useEffect(() => {
+    if (!partnerEmoji) return;
+    setPartnerReaction(partnerEmoji);
+    const t = setTimeout(() => setPartnerReaction(null), 2500);
+    return () => clearTimeout(t);
+  }, [partnerEmoji]);
 
   // Resign modal
   const [showResign, setShowResign] = useState(false);

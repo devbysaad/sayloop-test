@@ -49,12 +49,23 @@ const SessionPage = () => {
     }
   }, []); // run once on mount
 
+  // ── Auto-navigate after session ends ─────────────────────────────────────
+  // Both the resigner and the winner see ResultScreen for 4s then go to /match.
+  useEffect(() => {
+    if (status !== 'ended') return;
+    const timer = setTimeout(() => {
+      navigate('/match', { replace: true });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [status, navigate]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       dispatch(sessionActions.leaveSession());
     };
   }, [dispatch]);
+
 
   if (!dbUserId) {
     return (

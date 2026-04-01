@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { matchActions } from '../../redux/saga/match.saga';
@@ -14,26 +14,15 @@ import { SwipeCardSkeleton } from '../../components/ui/SkeletonCard';
 type Tab = 'browse' | 'requests' | 'history';
 
 // ── Auto-retry searching component ────────────────────────────────────────────
-// Shown when no users are left — polls every 4 seconds for new users.
-const AutoRetrySearching = ({ onRetry }: { onRetry: () => void }) => {
+// Pure UI only — no polling. Polling is managed by MatchPage so
+// mount/unmount cycles caused by usersLoading toggling can't trigger new fetches.
+const AutoRetrySearching = () => {
   const [dots, setDots] = useState('');
-  // Store onRetry in a ref so the interval callback always calls the latest
-  // version without needing onRetry in the useEffect deps (which caused
-  // 2-7x/sec re-renders because dispatch identity changes on every render).
-  const onRetryRef = useRef(onRetry);
-  onRetryRef.current = onRetry;
 
   useEffect(() => {
     const dotsTimer = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
     return () => clearInterval(dotsTimer);
   }, []);
-
-  useEffect(() => {
-    // Fire once immediately, then every 4 seconds
-    onRetryRef.current();
-    const retryTimer = setInterval(() => onRetryRef.current(), 4000);
-    return () => clearInterval(retryTimer);
-  }, []); // ← no deps: runs once on mount, cleans up on unmount
 
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -71,14 +60,37 @@ const MatchPage = () => {
   const [tab, setTab] = useState<Tab>('browse');
   const [topic, setTopic] = useState('');
 
+  // ── Initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    dispatch(matchActions.loadUsers({ userId: myUserId }));
+    if (myUserId) dispatch(matchActions.loadUsers({ userId: myUserId }));
   }, [myUserId]);
 
   useEffect(() => {
     if (tab === 'requests') dispatch(matchActions.loadRequests({ userId: myUserId }));
     if (tab === 'history') dispatch(matchActions.loadHistory({ userId: myUserId }));
   }, [tab]);
+
+  // ── Stable 4-second polling — ONLY when no users found and on browse tab ─────
+  // Kept here (not inside AutoRetrySearching) so the interval is NOT destroyed
+  // when usersLoading flips true (which temporarily unmounts AutoRetrySearching
+  // to show the skeleton — that was causing the 429 flood).
+  const usersLoadingRef = useRef(usersLoading);
+  usersLoadingRef.current = usersLoading;
+  const usersRef = useRef(users);
+  usersRef.current = users;
+
+  useEffect(() => {
+    if (tab !== 'browse' || !myUserId) return;
+    // Wait 4s before first retry (never fire immediately — the initial load
+    // via the effect above already ran the first fetch).
+    const timer = setInterval(() => {
+      // Skip if a request is already in-flight or users appeared
+      if (!usersLoadingRef.current && usersRef.current.length === 0) {
+        dispatch(matchActions.loadUsers({ userId: myUserId }));
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [tab, myUserId]); // stable — only resets when tab or userId changes
 
   useEffect(() => {
     if (mode === 'confirmed' && matchedSessionId) {
@@ -108,10 +120,6 @@ const MatchPage = () => {
 
   const currentUser = users[cardIdx] ?? null;
   const pendingCount = requests.length;
-  const handleLoadUsers = useCallback(
-    () => dispatch(matchActions.loadUsers({ userId: myUserId })),
-    [myUserId]
-  );
 
   const TABS: { id: Tab; label: string; badge?: number }[] = [
     { id: 'browse', label: '🔍 Browse' },
@@ -202,7 +210,7 @@ const MatchPage = () => {
               />
             </>
           ) : (
-            <AutoRetrySearching onRetry={handleLoadUsers} />
+            <AutoRetrySearching />
           )
         )}
 

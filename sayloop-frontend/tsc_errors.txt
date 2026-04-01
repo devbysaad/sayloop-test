@@ -1,0 +1,1 @@
+﻿src/components/modules/sessions/ConversationPanel.tsx(50,13): error TS7030: Not all code paths return a value.
