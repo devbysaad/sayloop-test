@@ -65,54 +65,26 @@ function GlobalMatchWatcher() {
     console.log('[GlobalMatchWatcher] notification changed:', notification, 'mode:', matchMode, 'pathname:', location.pathname);
   }, [notification, matchMode, location.pathname]);
 
-  // Initialize the match socket connection when user is signed in.
-  // Retry until clerk_id is available in localStorage (set by useAuthInit after sync).
+  // ── Socket init is now handled by useAuthInit (after /api/users/sync succeeds) ──
+  // GlobalMatchWatcher previously polled localStorage to retry initMatchSocket,
+  // but that caused a race: it could fire BEFORE sync completed (db_user_id not set)
+  // or fire a SECOND time (double socket connection). Removed entirely.
   useEffect(() => {
     if (!isSignedIn) {
-      console.log('[GlobalMatchWatcher] Not signed in, skipping socket init');
       setSocketDebug('not signed in');
       return;
     }
-    let attempts = 0;
-    const maxAttempts = 8; // ~16 seconds
+    // Just update the debug badge — socket state is managed by useAuthInit
+    const timer = setTimeout(async () => {
+      const sock = (await import('../../redux/service/socket.service')).getSocket();
+      const state = sock
+        ? (sock.connected ? 'connected' : sock.active ? 'connecting' : 'disconnected')
+        : 'null';
+      setSocketDebug(`socket: ${state} (id=${sock?.id || 'none'})`);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isSignedIn]);
 
-    const tryInit = () => {
-      const dbId = localStorage.getItem('db_user_id');
-      const clerkId = localStorage.getItem('clerk_id');
-      console.log(`[GlobalMatchWatcher] tryInit attempt=${attempts}: dbId=${dbId}, clerkId=${clerkId}`);
-      if (dbId && clerkId) {
-        console.log('[GlobalMatchWatcher] clerk_id available, dispatching initMatchSocket');
-        setSocketDebug(`connecting... (dbId=${dbId})`);
-        dispatch(matchActions.initMatchSocket());
-
-        // Check socket state after a delay
-        setTimeout(async () => {
-          const sock = (await import('../../redux/service/socket.service')).getSocket();
-          const state = sock ? (sock.connected ? 'connected' : sock.active ? 'connecting' : 'disconnected') : 'null';
-          console.log(`[GlobalMatchWatcher] Socket state after init: ${state}, id=${sock?.id}`);
-          setSocketDebug(`socket: ${state} (id=${sock?.id || 'none'})`);
-        }, 3000);
-        return true;
-      }
-      setSocketDebug(`waiting for auth... (attempt ${attempts})`);
-      return false;
-    };
-
-    if (tryInit()) return; // Already available
-
-    const interval = setInterval(() => {
-      attempts++;
-      if (tryInit() || attempts >= maxAttempts) {
-        clearInterval(interval);
-        if (attempts >= maxAttempts) {
-          console.warn('[GlobalMatchWatcher] clerk_id not found after max attempts');
-          setSocketDebug('FAILED: no clerk_id after 8 attempts');
-        }
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isSignedIn, dispatch]);
 
   // Don't show the modal if user is already in a session
   if (!notification || location.pathname === '/session') {

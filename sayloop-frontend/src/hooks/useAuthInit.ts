@@ -96,6 +96,10 @@ export const useAuthInit = () => {
         if (dbUser?.id) {
           store.dispatch(matchActions.loadRequests({ userId: dbUser.id }));
         }
+
+        // ✅ Init match socket AFTER sync is confirmed — db_user_id is now in
+        // localStorage so the saga won't hit "User not synced".
+        store.dispatch(matchActions.initMatchSocket());
       } catch (err) {
         console.error('[useAuthInit] Failed to sync user:', err);
 
